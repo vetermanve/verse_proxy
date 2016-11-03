@@ -13,8 +13,49 @@ var RestRequest = function (uid, method, path, query) {
     this.query = query || '';
 };
 
+var ReqPerformance = {
+    logs : [],
+    log : {
+        cnt : 0,
+        avg : 0,
+        time : 0
+    },
+    id : 0 ,
+    add: function (exTime) {
+        var timeId = Math.floor(Date.now()/1000);
+
+        // console.log('add '  + exTime, JSON.stringify(this));
+        
+        if (this.id != timeId) {
+            if (this.log.cnt) {
+                this.logs.push(Object.assign({},  this.log)); 
+                console.log(this.logs);
+            }
+            
+            if (this.logs.length > 10) {
+               this.logs.shift(); 
+            }
+
+            this.log = {
+                id : timeId,
+                date : new Date(timeId * 1000).toISOString(),
+                cnt : 0,
+                avg : 0,
+                time : 0
+            };
+            
+            this.id = timeId;
+        }
+
+        this.log.cnt++;
+        this.log.time += exTime;
+        this.log.avg = Math.round((this.log.time / this.log.cnt * 10000))/10000;
+    }
+};
+
 var Requests = {
-    timing : {},
+    timing : [],
+    logId : [],
     process  : {}, register: function (res) {
         var uid = this.getUid();
         this.process[uid] = {result: res, time: Date.now()};
@@ -29,8 +70,8 @@ var Requests = {
     },
     getUid: function () {
         return uuid.v4();
-    }, 
-    write : function (uid, code, head, body) {
+    },
+    writeResponse : function (uid, code, head, body) {
         var reqData = this.process[uid];
         var res = reqData.result;
         
@@ -39,25 +80,9 @@ var Requests = {
             return false;
         }
 
-        var timeId = Math.floor(Date.now()/1000);
+        
         var exTime = (Date.now() - reqData.time)/1000;
-        
-        var tLog = {};
-        
-        if (typeof this.timing[timeId] == 'undefined') {
-            console.log(this.timing);
-            this.timing[timeId] = tLog = {
-                cnt : 0,
-                avg : 0,
-                time : 0
-            };
-        } else {
-            tLog = this.timing[timeId]; 
-        }
-
-        tLog.cnt++;
-        tLog.time += exTime; 
-        tLog.avg = Math.round((tLog.time / tLog.cnt * 10000))/10000;
+        ReqPerformance.add(exTime);
         
         // console.log('Writing response to # ' + uid + ' catched by time ' + exTime);
         
@@ -81,7 +106,14 @@ var HttpHandler = {
             res.writeHead(404);
             res.end();
             return;
-        } 
+        }
+
+        if (urlData.pathname == '/node-status') {
+            res.writeHead(200);
+            res.write(JSON.stringify(ReqPerformance.logs));
+            res.end();
+            return;
+        }
 
         var uid = Requests.register(res);
         var restRequest = new RestRequest(uid, req.method, urlData.pathname, urlData.query);
@@ -202,7 +234,7 @@ var AmqpCloudResultReader = {
             body = data.body
         ;
         
-        Requests.write(uid, code, head, body);
+        Requests.writeResponse(uid, code, head, body);
     },
 
     reconnect: function () {
