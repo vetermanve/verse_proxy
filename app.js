@@ -73,13 +73,13 @@ var Requests = {
     },
     writeResponse : function (uid, code, head, body) {
         var reqData = this.process[uid];
-        var res = reqData.result;
         
-        if (typeof res == 'undefined') {
+        if (typeof reqData == 'undefined') {
             console.warn('uid result object not found. Body skip');
             return false;
         }
-
+        
+        var res = reqData.result;
         
         var exTime = (Date.now() - reqData.time)/1000;
         ReqPerformance.add(exTime);
