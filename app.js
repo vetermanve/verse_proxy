@@ -294,7 +294,7 @@ var publishQueue = identity.getPublishQueue();
 var resultQueue = identity.ns + '.' + identity.getNodeId();
 
 Requests.init();
-AmqpCloudPublisher.init('amqp://dev.alol.io', publishQueue, '');
-AmqpCloudResultReader.init('amqp://dev.alol.io', resultQueue, '');
+AmqpCloudPublisher.init('amqp://localhost', publishQueue, '');
+AmqpCloudResultReader.init('amqp://localhost', resultQueue, '');
 
 app.listen(9080);

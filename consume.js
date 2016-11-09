@@ -2,7 +2,7 @@ var rabbit = require('rabbit.js');
 var identity = require('./modules/identity.js').identity;
 console.log(identity);
 
-var context = rabbit.createContext('amqp://dev.alol.io');
+var context = rabbit.createContext('amqp://localhost');
 
 var PubCloud = {
     publishing : (new Map),

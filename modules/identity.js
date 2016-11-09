@@ -2,10 +2,14 @@
  * Created by vetermanve on 09.11.16.
  */
 
+var uuid = require("node-uuid");
+
+var pmId = process.env.pm_id || uuid.v4();
+
 exports.identity = {
     dc : 'office',
     host : 'iMike',
-    node : 1,
+    node : pmId,
     ns : 'bpass',
     getNodeId : function () {
         return this.dc + '.' + this.host + '.' + this.node;
