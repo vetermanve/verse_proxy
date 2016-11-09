@@ -5,13 +5,31 @@ var url = require("url");
 var amqp = require("amqplib");
 var uuid = require("node-uuid");
 var rabbit = require('rabbit.js');
+var identity = require('./modules/identity.js').identity;
+var restRequest = require('./modules/restRequest.js');
 
-var RestRequest = function (uid, method, path, query) {
-    this.uid = uid;
-    this.path = path;
-    this.method = method;
-    this.query = query || '';
+// var HashTable = require('hashtable');
+
+var blog = {
+    prefix : null,
+    log : function (info, warn ) {
+        warn = warn || false;
+        if (!this.prefix) {
+            this.prefix = identity.getNodeId()       
+        }
+        info = this.prefix + '> ' + (typeof info != 'string' ? JSON.stringify(info, null, 4) : info);
+        
+        if (warn) {
+            console.warn(info);
+        } else {
+            console.log(info);    
+        }
+    },
+    warn : function (info) {
+       this.log(info, true); 
+    }
 };
+
 
 var ReqPerformance = {
     logs : [],
@@ -29,7 +47,7 @@ var ReqPerformance = {
         if (this.id != timeId) {
             if (this.log.cnt) {
                 this.logs.push(Object.assign({},  this.log)); 
-                console.log(this.logs);
+                blog.log(this.logs);
             }
             
             if (this.logs.length > 10) {
@@ -56,33 +74,37 @@ var ReqPerformance = {
 var Requests = {
     timing : [],
     logId : [],
-    process  : {}, register: function (res) {
-        var uid = this.getUid();
-        this.process[uid] = {result: res, time: Date.now()};
+    process : {},
+    init : function () {
+        this.process = new Map();  
+    },
+    register: function (res, request) {
+        this.process.set(request.uid, {result: res, request: request, time: Date.now()});
         res.on('close', this.clearRequest.bind(this));
         res.on('error', function () {
-            console.error('Requests: error on http request ' + JSON.stringify(arguments));
+            blog.error('Requests: error on http request ' + JSON.stringify(arguments));
         });
-        return uid;
     }, 
     clearRequest : function () {
-        console.warn('Http request closed ' + JSON.stringify(arguments));
-    },
-    getUid: function () {
-        return uuid.v4();
+        blog.warn('Http request closed ' + JSON.stringify(arguments));
     },
     writeResponse : function (uid, code, head, body) {
-        var reqData = this.process[uid];
+        var reqData = this.process.get(uid);
         
         if (typeof reqData == 'undefined') {
-            console.warn('uid result object not found. Body skip');
+            blog.warn('uid ' + uid +' result object not found. Body skip');
             return false;
+        } else {
+            
         }
         
         var res = reqData.result;
+        reqData.request.addTrace('Requests writeResponse');
         
         var exTime = (Date.now() - reqData.time)/1000;
         ReqPerformance.add(exTime);
+        
+        blog.log(reqData.request.trace);
         
         // console.log('Writing response to # ' + uid + ' catched by time ' + exTime);
         
@@ -90,7 +112,8 @@ var Requests = {
         res.write(body);
         res.end();
         
-        delete this.process[uid];
+        this.process.delete(uid);
+        
     }
 };
 
@@ -115,11 +138,11 @@ var HttpHandler = {
             return;
         }
 
-        var uid = Requests.register(res);
-        var restRequest = new RestRequest(uid, req.method, urlData.pathname, urlData.query);
-        // console.log('Start processing: ' + JSON.stringify(restRequest));
+        var request = restRequest.build(uuid.v4(), req.method, urlData.pathname, urlData.query, identity.getResultQueue());
+        // console.log('Start processing: ' + JSON.stringify(request));
 
-        AmqpCloudPublisher.add(restRequest);
+        var uid = Requests.register(res, request);
+        AmqpCloudPublisher.add(request);
         // res.write(AmqpCloudPublisher.host);
         // res.end();
     }
@@ -150,28 +173,30 @@ var AmqpCloudPublisher = {
         self.exchange = exchange;
         self.queue = queue;
 
-        self.context = rabbit.createContext(self.host);
+        self.context = rabbit.createContext(self.host, {persistent : true});
         self.context.on('ready', self.onInit.bind(self));
     },
 
     onInit: function () {
         var self = this;
-        console.log('AmqpCloudPublisher socket ready on host: ' + self.host);
-        self.publisher = self.context.socket('PUB');
-        self.connect();        
+        blog.log('AmqpCloudPublisher socket ready on host: ' + self.exchange + '@' + self.host);
+        self.publisher = self.context.socket('PUSH');
+        self.connect();
     },
 
-    add: function (data) {
+    add: function (request) {
         if (this.queueReady) {
-            this.publisher.write(JSON.stringify(data), 'utf8');    
+            blog.log("Sent request " + request.uid);
+            request.addTrace('AmqpCloudPublisher add');
+            this.publisher.write(JSON.stringify(request), 'utf8');    
         } else {
-            this.requestsQueue.push(data);      
+            this.requestsQueue.push(request);      
         }
     },
 
     reconnect: function () {
         var self = this;
-        console.log('AmqpCloudPublisher reconnect');
+        blog.log('AmqpCloudPublisher reconnect');
         self.queueReady = false;
         self.publisher.close();
         self.connect();
@@ -182,7 +207,7 @@ var AmqpCloudPublisher = {
         
         // sub.pipe(process.stdout);
         self.publisher.connect(self.exchange, function () {
-            console.log("AmqpCloudPublisher publish queue ready");
+            blog.log("AmqpCloudPublisher publish queue ready on " + self.exchange);
             self.publisher.on('close', function () {self.reconnect()});
             self.queueReady = true;
             self.processQueue();
@@ -214,14 +239,15 @@ var AmqpCloudResultReader = {
         self.exchange = exchange;
         self.queue = queue;
 
-        self.context = rabbit.createContext(self.host);
+        self.context = rabbit.createContext(self.host, {durable: true, routing: 'direct'});
         self.context.on('ready', self.onInit.bind(self));
     },
 
     onInit: function () {
         var self = this;
-        console.log('AmqpCloudResultReader socket ready on host: ' + self.host);
-        self.reader = self.context.socket('SUB');
+        blog.log('AmqpCloudResultReader socket ready on host: '+ self.exchange + '@' + self.host);
+        self.reader = self.context.socket('PULL', {prefetch: 1});
+        self.reader.setEncoding('utf8');
         self.connect();
     },
 
@@ -239,7 +265,7 @@ var AmqpCloudResultReader = {
 
     reconnect: function () {
         var self = this;
-        console.log('AmqpCloudResultReader reconnect');
+        blog.log('AmqpCloudResultReader reconnect');
         self.queueReady = false;
         self.reader.close();
         self.connect();
@@ -249,7 +275,7 @@ var AmqpCloudResultReader = {
         var self = this;
 
         self.reader.connect(self.exchange, function () {
-            console.log("AmqpCloudResultReader read queue ready");
+            blog.log("AmqpCloudResultReader read queue ready");
             self.reader.on('close', self.reconnect.bind(self));
             self.reader.on('data', self.onData.bind(self));
             self.queueReady = true;
@@ -264,8 +290,11 @@ var AmqpCloudResultReader = {
 //     });
 // });
 
+var publishQueue = identity.getPublishQueue();
+var resultQueue = identity.ns + '.' + identity.getNodeId();
 
-AmqpCloudPublisher.init('amqp://dev.alol.io', 'bpass.client_requests', '');
-AmqpCloudResultReader.init('amqp://dev.alol.io', 'bpass.client_answers', '');
+Requests.init();
+AmqpCloudPublisher.init('amqp://dev.alol.io', publishQueue, '');
+AmqpCloudResultReader.init('amqp://dev.alol.io', resultQueue, '');
 
 app.listen(9080);
