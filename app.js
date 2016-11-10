@@ -1,12 +1,11 @@
-var app = require('http').createServer(handler);
+var app = require('http').createServer(function handler(req, res) { HttpHandler.handle(req, res); });
 var io = require('socket.io')(app);
 var fs = require('fs');
 var url = require("url");
 var amqp = require("amqplib");
-var uuid = require("node-uuid");
 var rabbit = require('rabbit.js');
 var identity = require('./modules/identity.js').identity;
-var restRequest = require('./modules/restRequest.js');
+var backendProtocol = require('./modules/restRequest.js');
 
 // var HashTable = require('hashtable');
 
@@ -78,42 +77,44 @@ var Requests = {
     init : function () {
         this.process = new Map();  
     },
-    register: function (res, request) {
-        this.process.set(request.uid, {result: res, request: request, time: Date.now()});
-        res.on('close', this.clearRequest.bind(this));
-        res.on('error', function () {
-            blog.error('Requests: error on http request ' + JSON.stringify(arguments));
+    register: function (backendRequest) {
+        var uid = backendRequest.uid;
+        var self = this;
+        this.process.set(uid, backendRequest);
+        
+        backendRequest.resultStream.on('close', function() {
+            self.clearRequest(uid, 'remote stream close');
+        });
+        backendRequest.resultStream.on('error', function () {
+            self.clearRequest(uid, 'result stream error');
+            blog.error('Requests: error on http request on ' + backendRequest.body.method + " "+ backendRequest.body.path);
         });
     }, 
-    clearRequest : function () {
-        blog.warn('Http request closed ' + JSON.stringify(arguments));
+    clearRequest : function (uid, reason) {
+        reason = reason || 'unknown';
+        this.process.delete(uid)
+        blog.warn('Http request closed ' + uid + " by reason: " + reason);
     },
     writeResponse : function (uid, code, head, body) {
-        var reqData = this.process.get(uid);
+        var backendRequest = this.process.get(uid);
         
-        if (typeof reqData == 'undefined') {
+        if (typeof backendRequest == 'undefined') {
             blog.warn('uid ' + uid +' result object not found. Body skip');
             return false;
-        } else {
-            
         }
         
-        var res = reqData.result;
-        reqData.request.addTrace('Requests writeResponse');
+        var res = backendRequest.resultStream;
+        backendRequest.addTrace('Requests writeResponse');
         
-        var exTime = (Date.now() - reqData.time)/1000;
-        ReqPerformance.add(exTime);
+        ReqPerformance.add((Date.now() - backendRequest.born)/1000);
         
-        blog.log(reqData.request.trace);
-        
-        // console.log('Writing response to # ' + uid + ' catched by time ' + exTime);
+        blog.log(backendRequest.trace);
         
         res.writeHead(code);
         res.write(body);
         res.end();
         
         this.process.delete(uid);
-        
     }
 };
 
@@ -123,34 +124,53 @@ var Requests = {
  * @type {{handle: HttpHandler.handle}}
  */
 var HttpHandler = {
-    handle: function (req, res) {
-        var urlData = url.parse(req.url);
+    handle: function (httpRequest, httpResult) {
+        var urlData = url.parse(httpRequest.url);
+        
         if (urlData.pathname == '/favicon.ico') {
-            res.writeHead(404);
-            res.end();
+            httpResult.writeHead(404);
+            httpResult.end();
             return;
         }
 
         if (urlData.pathname == '/node-status') {
-            res.writeHead(200);
-            res.write(JSON.stringify(ReqPerformance.logs));
-            res.end();
+            httpResult.writeHead(200);
+            httpResult.write(JSON.stringify(ReqPerformance.logs));
+            httpResult.end();
             return;
         }
 
-        var request = restRequest.build(uuid.v4(), req.method, urlData.pathname, urlData.query, identity.getResultQueue());
-        // console.log('Start processing: ' + JSON.stringify(request));
-
-        var uid = Requests.register(res, request);
-        AmqpCloudPublisher.add(request);
-        // res.write(AmqpCloudPublisher.host);
-        // res.end();
+        var method = httpRequest.method;
+        
+        var backendRequest = backendProtocol.buildRequestObj(httpRequest.method, urlData.pathname, urlData.query, identity.getResultQueue());
+        backendRequest.resultStream = httpResult;
+        
+        Requests.register(backendRequest);
+        
+        if (method == 'POST' || method == 'PUT') {
+            this.catchBody(httpRequest, backendRequest);      
+        } else  {
+            this.process(backendRequest)
+        }
+    },
+    catchBody : function (httpRequest, restRequest) {
+        var self = this;
+        var body = [];
+        
+        httpRequest.on('data', function(chunk) {
+            body.push(chunk);
+        }).on('end', function() {
+            restRequest.body = Buffer.concat(body).toString(); 
+            self.process(restRequest);
+        }).on('error', function () {
+            Requests.clearRequest(restRequest.uid, 'httpRequest error on catchBody');
+        });
+    },
+    process : function (backendRequest) {
+        AmqpCloudPublisher.add(backendRequest);
+        backendRequest.setData('cleared');
     }
 };
-
-function handler(req, res) {
-    HttpHandler.handle(req, res);
-}
 
 var AmqpCloudPublisher = {
     /* amqp connection meta */
@@ -184,13 +204,13 @@ var AmqpCloudPublisher = {
         self.connect();
     },
 
-    add: function (request) {
+    add: function (backendRequest) {
         if (this.queueReady) {
-            blog.log("Sent request " + request.uid);
-            request.addTrace('AmqpCloudPublisher add');
-            this.publisher.write(JSON.stringify(request), 'utf8');    
+            blog.log("Sent request " + backendRequest.uid);
+            backendRequest.addTrace('AmqpCloudPublisher add');
+            this.publisher.write(backendProtocol.pack(backendRequest), 'utf8');    
         } else {
-            this.requestsQueue.push(request);      
+            this.requestsQueue.push(backendRequest);      
         }
     },
 
