@@ -11,7 +11,7 @@ var argv = process.env.args ? envArgs(process.env.args.split(' ')) : {};
 var pmId = process.env.pm_id || uuid.v4();
 var cloud = argv.cloud || 'main_cloud';
 var host = os.hostname().replace('.', "_");
-var dc = argv.dc || 'mars_dc';
+var dc = argv.dc || 'single_dc';
 
 exports.identity = {
     dc : dc,

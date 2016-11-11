@@ -1,0 +1,12 @@
+{
+  "apps": [
+    {
+      "name": "bpass",
+      "script": "app.js",
+      "instances": "max",
+      "kill_timeout": 30000,
+      "max_memory_restart" : "300M",
+      "exec_mode" : "cluster"
+    }
+  ]
+}
