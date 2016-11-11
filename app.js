@@ -2,7 +2,6 @@ var app = require('http').createServer(function handler(req, res) { HttpHandler.
 var io = require('socket.io')(app);
 var fs = require('fs');
 var url = require("url");
-var amqp = require("amqplib");
 var rabbit = require('rabbit.js');
 var identity = require('./modules/identity.js').identity;
 var backendProtocol = require('./modules/restRequest.js');
@@ -108,7 +107,7 @@ var Requests = {
         
         ReqPerformance.add((Date.now() - backendRequest.born)/1000);
         
-        blog.log(backendRequest.trace);
+        // blog.log(backendRequest.trace);
         
         res.writeHead(code);
         res.write(body);
