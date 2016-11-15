@@ -109,7 +109,7 @@ var Requests = {
         
         // blog.log(backendRequest.trace);
         
-        res.writeHead(code);
+        res.writeHead(code, head);
         res.write(body);
         res.end();
         
