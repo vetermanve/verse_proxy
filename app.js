@@ -110,7 +110,12 @@ var Requests = {
         // blog.log(backendRequest.trace);
         
         res.writeHead(code, head);
-        res.write(body);
+        if (typeof body != 'string') {
+            res.write(JSON.stringify(body));    
+        } else {
+            res.write(body);
+        }
+        
         res.end();
         
         this.process.delete(uid);
@@ -159,7 +164,7 @@ var HttpHandler = {
         httpRequest.on('data', function(chunk) {
             body.push(chunk);
         }).on('end', function() {
-            restRequest.body = Buffer.concat(body).toString(); 
+            restRequest.setData(Buffer.concat(body).toString());
             self.process(restRequest);
         }).on('error', function () {
             Requests.clearRequest(restRequest.uid, 'httpRequest error on catchBody');
@@ -311,9 +316,10 @@ var AmqpCloudResultReader = {
 
 var publishQueue = identity.getPublishQueue();
 var resultQueue = identity.ns + '.' + identity.getNodeId();
+var amqpHost = 'dev.alol.io';
 
 Requests.init();
-AmqpCloudPublisher.init('amqp://localhost', publishQueue, '');
-AmqpCloudResultReader.init('amqp://localhost', resultQueue, '');
+AmqpCloudPublisher.init('amqp://' + amqpHost, publishQueue, '');
+AmqpCloudResultReader.init('amqp://' + amqpHost, resultQueue, '');
 
 app.listen(9080);
