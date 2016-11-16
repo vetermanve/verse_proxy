@@ -316,7 +316,7 @@ var AmqpCloudResultReader = {
 
 var publishQueue = identity.getPublishQueue();
 var resultQueue = identity.ns + '.' + identity.getNodeId();
-var amqpHost = 'dev.alol.io';
+var amqpHost = 'localhost';//'dev.alol.io';
 
 Requests.init();
 AmqpCloudPublisher.init('amqp://' + amqpHost, publishQueue, '');
