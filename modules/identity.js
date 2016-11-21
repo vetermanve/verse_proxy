@@ -9,9 +9,11 @@ var envArgs = require('minimist');
 var argv = process.env.args ? envArgs(process.env.args.split(' ')) : {};
 
 var pmId = process.env.pm_id || uuid.v4();
-var cloud = argv.cloud || 'main_cloud';
+var cloudName = argv.cloud || 'user';
 var host = os.hostname().replace('.', "_");
 var dc = argv.dc || 'single_dc';
+var version = argv.version || 'v2';
+var cloud = cloudName + '_' + version;
 
 exports.identity = {
     dc : dc,
@@ -20,7 +22,7 @@ exports.identity = {
     node : pmId,
     ns : 'bpass',
     getNodeId : function () {
-        return this.dc + '.' + this.cloud + '.' + this.host + '.' + this.node;
+        return this.dc + '.' + this.host + '.' + this.node;
     },
     getPublishQueue : function () {
         return this.ns + '.' + this.dc + '.' + this.cloud;

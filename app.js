@@ -91,7 +91,7 @@ var Requests = {
     }, 
     clearRequest : function (uid, reason) {
         reason = reason || 'unknown';
-        this.process.delete(uid)
+        this.process.delete(uid);
         blog.warn('Http request closed ' + uid + " by reason: " + reason);
     },
     writeResponse : function (uid, code, head, body) {
@@ -199,6 +199,7 @@ var AmqpCloudPublisher = {
 
         self.context = rabbit.createContext(self.host, {persistent : true});
         self.context.on('ready', self.onInit.bind(self));
+        self.context.on('error', self.reconnect.bind(self));
     },
 
     onInit: function () {
@@ -222,7 +223,12 @@ var AmqpCloudPublisher = {
         var self = this;
         blog.log('AmqpCloudPublisher reconnect');
         self.queueReady = false;
-        self.publisher.close();
+        try {
+            self.publisher.close();    
+        } catch (e) {
+            blog.log('On reconnect: ' + e.message + ", type: " + e.name);
+        }
+        
         self.connect();
     },
     
@@ -232,10 +238,13 @@ var AmqpCloudPublisher = {
         // sub.pipe(process.stdout);
         self.publisher.connect(self.exchange, function () {
             blog.log("AmqpCloudPublisher publish queue ready on " + self.exchange);
-            self.publisher.on('close', function () {self.reconnect()});
+            self.publisher.on('close', self.reconnect.bind(self));
+            self.publisher.on('error', self.reconnect.bind(self));
             self.queueReady = true;
             self.processQueue();
         });
+        
+        self.publisher.on('error', self.reconnect.bind(self));
     },
     processQueue : function () {
         while (this.requestsQueue.length && this.queueReady) {
@@ -265,6 +274,7 @@ var AmqpCloudResultReader = {
 
         self.context = rabbit.createContext(self.host, {durable: true, routing: 'direct'});
         self.context.on('ready', self.onInit.bind(self));
+        self.context.on('error', self.reconnect.bind(self));
     },
 
     onInit: function () {
@@ -302,6 +312,7 @@ var AmqpCloudResultReader = {
             blog.log("AmqpCloudResultReader read queue ready");
             self.reader.on('close', self.reconnect.bind(self));
             self.reader.on('data', self.onData.bind(self));
+            self.reader.on('error', self.reconnect.bind(self));
             self.queueReady = true;
         });
     }
@@ -316,7 +327,8 @@ var AmqpCloudResultReader = {
 
 var publishQueue = identity.getPublishQueue();
 var resultQueue = identity.ns + '.' + identity.getNodeId();
-var amqpHost = 'localhost';//'dev.alol.io';
+var amqpHost = 'localhost';
+// var amqpHost = 'dev.alol.io';
 
 Requests.init();
 AmqpCloudPublisher.init('amqp://' + amqpHost, publishQueue, '');
