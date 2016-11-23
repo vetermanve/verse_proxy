@@ -115,7 +115,8 @@ var Requests = {
         
         var processing = (Date.now() - backendRequest.born)/1000;
         ReqPerformance.add(processing);
-        
+
+        res.shouldKeepAlive = false;
         res.writeHead(code, head);
         
         if (backendRequest.body.method !== 'OPTIONS' && backendRequest.body.method !== 'HEAD') {
