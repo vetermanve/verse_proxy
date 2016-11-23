@@ -10,6 +10,7 @@ var backendProtocol = require('./modules/restRequest.js');
 
 var blog = {
     prefix : null,
+    showDebugLogs : false,
     log : function (info, warn ) {
         warn = warn || false;
         if (!this.prefix) {
@@ -19,12 +20,20 @@ var blog = {
         
         if (warn) {
             console.warn(info);
-        } else {
+        } else if(this.debug) {
             console.log(info);    
         }
     },
     warn : function (info) {
        this.log(info, true); 
+    }, 
+    debug : function (info) {
+        if (this.showDebugLogs) {
+            this.log(info);    
+        }
+    },
+    error : function (info) {
+        this.log(info, true);
     }
 };
 
@@ -45,7 +54,6 @@ var ReqPerformance = {
         if (this.id != timeId) {
             if (this.log.cnt) {
                 this.logs.push(Object.assign({},  this.log)); 
-                blog.log(this.logs);
             }
             
             if (this.logs.length > 10) {
@@ -105,15 +113,18 @@ var Requests = {
         var res = backendRequest.resultStream;
         backendRequest.addTrace('Requests writeResponse');
         
-        ReqPerformance.add((Date.now() - backendRequest.born)/1000);
-        
-        // blog.log(backendRequest.trace);
+        var processing = (Date.now() - backendRequest.born)/1000;
+        ReqPerformance.add(processing);
         
         res.writeHead(code, head);
-        if (typeof body != 'string') {
-            res.write(JSON.stringify(body));    
-        } else {
-            res.write(body);
+        
+        if (backendRequest.body.method !== 'OPTIONS' && backendRequest.body.method !== 'HEAD') {
+            if (typeof body != 'string') {
+                body.p_time = processing ;
+                res.write(JSON.stringify(body));
+            } else {
+                res.write(body);
+            }    
         }
         
         res.end();
@@ -211,7 +222,7 @@ var AmqpCloudPublisher = {
 
     add: function (backendRequest) {
         if (this.queueReady) {
-            blog.log("Sent request " + backendRequest.uid);
+            blog.debug("Sent request " + backendRequest.uid);
             backendRequest.addTrace('AmqpCloudPublisher add');
             this.publisher.write(backendProtocol.pack(backendRequest), 'utf8');    
         } else {
@@ -226,7 +237,7 @@ var AmqpCloudPublisher = {
         try {
             self.publisher.close();    
         } catch (e) {
-            blog.log('On reconnect: ' + e.message + ", type: " + e.name);
+            blog.log('Exception on reconnect: ' + e.message + ", type: " + e.name);
         }
         
         self.connect();
@@ -328,6 +339,8 @@ var AmqpCloudResultReader = {
 var publishQueue = identity.getPublishQueue();
 var resultQueue = identity.ns + '.' + identity.getNodeId();
 var amqpHost = 'localhost';
+
+blog.showDebugLogs = true;
 // var amqpHost = 'dev.alol.io';
 
 Requests.init();
