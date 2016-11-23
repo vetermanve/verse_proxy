@@ -15,6 +15,7 @@ var BackendRequest = function (method, path, query, reply) {
         method : method,
         path : path,
         query : query || '',
+        headers : {},
         data : {}, 
         
         reply: reply,

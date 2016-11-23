@@ -160,7 +160,11 @@ var HttpHandler = {
         
         var backendRequest = backendProtocol.buildRequestObj(httpRequest.method, urlData.pathname, urlData.query, identity.getResultQueue());
         backendRequest.resultStream = httpResult;
-        
+
+        for (var i = 0; i < httpRequest.rawHeaders.length; i = i+2) {
+            backendRequest.body.headers[httpRequest.rawHeaders[i]] = httpRequest.rawHeaders[i+1];
+        }
+
         Requests.register(backendRequest);
         
         if (method == 'POST' || method == 'PUT') {
