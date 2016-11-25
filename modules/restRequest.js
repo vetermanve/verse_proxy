@@ -36,6 +36,8 @@ var BackendRequest = function (method, path, query, reply) {
     };
     
     self.resultStream = {};
+    self.request = {};
+    self.cookies = {};
 };
 
 exports.buildRequestObj = function (method, path, query, reply) {

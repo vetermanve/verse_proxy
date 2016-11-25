@@ -1,10 +1,12 @@
 var app = require('http').createServer(function handler(req, res) { HttpHandler.handle(req, res); });
+var Cookies = require( "cookies" );
 var io = require('socket.io')(app);
 var fs = require('fs');
 var url = require("url");
 var rabbit = require('rabbit.js');
 var identity = require('./modules/identity.js').identity;
 var backendProtocol = require('./modules/restRequest.js');
+var uuid = require("node-uuid");
 
 // var HashTable = require('hashtable');
 
@@ -77,6 +79,66 @@ var ReqPerformance = {
     }
 };
 
+
+/**
+ * Main Http consumer
+ *
+ * @type {{handle: HttpHandler.handle}}
+ */
+var HttpHandler = {
+    handle: function (httpRequest, httpResult) {
+        var urlData = url.parse(httpRequest.url);
+
+        if (urlData.pathname == '/favicon.ico') {
+            httpResult.writeHead(404);
+            httpResult.end();
+            return;
+        }
+
+        if (urlData.pathname == '/node-status') {
+            httpResult.writeHead(200);
+            httpResult.write(JSON.stringify(ReqPerformance.logs));
+            httpResult.end();
+            return;
+        }
+
+        var method = httpRequest.method;
+
+        var backendRequest = backendProtocol.buildRequestObj(httpRequest.method, urlData.pathname, urlData.query, identity.getResultQueue());
+        backendRequest.resultStream = httpResult;
+        backendRequest.request = httpRequest;
+        backendRequest.cookies = new Cookies(backendRequest.request, backendRequest.resultStream);
+        backendRequest.body.headers= httpRequest.headers;
+
+        Requests.register(backendRequest);
+        blog.log(backendRequest.body);
+
+        if (method == 'POST' || method == 'PUT') {
+            this.catchBody(httpRequest, backendRequest);
+        } else  {
+            this.process(backendRequest)
+        }
+    },
+    catchBody : function (httpRequest, restRequest) {
+        var self = this;
+        var body = [];
+
+        httpRequest.on('data', function(chunk) {
+            body.push(chunk);
+        }).on('end', function() {
+            restRequest.setData(Buffer.concat(body).toString());
+            self.process(restRequest);
+        }).on('error', function () {
+            Requests.clearRequest(restRequest.uid, 'httpRequest error on catchBody');
+        });
+    },
+    process : function (backendRequest) {
+        AmqpCloudPublisher.add(backendRequest);
+        backendRequest.setData('cleared');
+    }
+};
+
+
 var Requests = {
     timing : [],
     logId : [],
@@ -102,7 +164,7 @@ var Requests = {
         this.process.delete(uid);
         blog.warn('Http request closed ' + uid + " by reason: " + reason);
     },
-    writeResponse : function (uid, code, head, body) {
+    writeResponse : function (uid, code, head, body, state) {
         var backendRequest = this.process.get(uid);
         
         if (typeof backendRequest == 'undefined') {
@@ -119,76 +181,26 @@ var Requests = {
         res.shouldKeepAlive = false;
         res.writeHead(code, head);
         
+        var cookies = backendRequest.cookies; 
+        
+        var stateItem;
+        for (var stateKey in state) {
+            stateItem = state[stateKey];
+            cookies.set(stateKey, stateItem[0], { httpOnly: true, secure: true, expires : new Date(stateItem[1])})
+        }
+        
         if (backendRequest.body.method !== 'OPTIONS' && backendRequest.body.method !== 'HEAD') {
             if (typeof body != 'string') {
                 body.p_time = processing ;
                 res.write(JSON.stringify(body));
             } else {
                 res.write(body);
-            }    
+            }
         }
         
         res.end();
         
         this.process.delete(uid);
-    }
-};
-
-/**
- * Main Http consumer
- *
- * @type {{handle: HttpHandler.handle}}
- */
-var HttpHandler = {
-    handle: function (httpRequest, httpResult) {
-        var urlData = url.parse(httpRequest.url);
-        
-        if (urlData.pathname == '/favicon.ico') {
-            httpResult.writeHead(404);
-            httpResult.end();
-            return;
-        }
-
-        if (urlData.pathname == '/node-status') {
-            httpResult.writeHead(200);
-            httpResult.write(JSON.stringify(ReqPerformance.logs));
-            httpResult.end();
-            return;
-        }
-
-        var method = httpRequest.method;
-        
-        var backendRequest = backendProtocol.buildRequestObj(httpRequest.method, urlData.pathname, urlData.query, identity.getResultQueue());
-        backendRequest.resultStream = httpResult;
-
-        for (var i = 0; i < httpRequest.rawHeaders.length; i = i+2) {
-            backendRequest.body.headers[httpRequest.rawHeaders[i]] = httpRequest.rawHeaders[i+1];
-        }
-
-        Requests.register(backendRequest);
-        
-        if (method == 'POST' || method == 'PUT') {
-            this.catchBody(httpRequest, backendRequest);      
-        } else  {
-            this.process(backendRequest)
-        }
-    },
-    catchBody : function (httpRequest, restRequest) {
-        var self = this;
-        var body = [];
-        
-        httpRequest.on('data', function(chunk) {
-            body.push(chunk);
-        }).on('end', function() {
-            restRequest.setData(Buffer.concat(body).toString());
-            self.process(restRequest);
-        }).on('error', function () {
-            Requests.clearRequest(restRequest.uid, 'httpRequest error on catchBody');
-        });
-    },
-    process : function (backendRequest) {
-        AmqpCloudPublisher.add(backendRequest);
-        backendRequest.setData('cleared');
     }
 };
 
@@ -206,28 +218,59 @@ var AmqpCloudPublisher = {
     /* publish items queue */
     requestsQueue: [],
 
+    logger : {},
+    log : function (data) {
+        this.logger.log(data);
+    },
+
     /* init publisher */
     init: function (host, exchange, queue) {
         var self = this;
         self.host = host;
         self.exchange = exchange;
         self.queue = queue;
+        self.logger = Object.create(blog);
+        self.logger.prefix = 'Publisher';
+        self.initContext();
+    },
 
+    initContext : function () {
+        var self = this;
+
+        self.log('initContext');
         self.context = rabbit.createContext(self.host, {persistent : true});
+        
+        var ctxtUuid = uuid.v4();
+        self.context.uuid = ctxtUuid;
+
         self.context.on('ready', self.onInit.bind(self));
-        self.context.on('error', self.reconnect.bind(self));
+        self.context.on('error', function() {
+            self.onConnectionError(ctxtUuid);
+        });
+    },
+
+    onConnectionError : function(uuid) {
+        var self = this;
+        this.log('onConnectionError: ' + uuid);
+
+        if (this.context.uuid == uuid && !self.reconnecting) {
+            self.reconnecting = setTimeout(function () {
+                self.reconnecting = false;
+                self.initContext();
+            }, 200);
+        }
     },
 
     onInit: function () {
         var self = this;
-        blog.log('AmqpCloudPublisher socket ready on host: ' + self.exchange + '@' + self.host);
+        this.log('socket ready at: ' + self.host);
         self.publisher = self.context.socket('PUSH');
         self.connect();
     },
 
     add: function (backendRequest) {
         if (this.queueReady) {
-            blog.debug("Sent request " + backendRequest.uid);
+            this.debug("Sent request " + backendRequest.uid);
             backendRequest.addTrace('AmqpCloudPublisher add');
             this.publisher.write(backendProtocol.pack(backendRequest), 'utf8');    
         } else {
@@ -235,32 +278,38 @@ var AmqpCloudPublisher = {
         }
     },
 
-    reconnect: function () {
+    reconnect: function (e) {
         var self = this;
-        blog.log('AmqpCloudPublisher reconnect');
+        self.log('reconnect case: ' + JSON.stringify(e));
+
         self.queueReady = false;
-        try {
-            self.publisher.close();    
-        } catch (e) {
-            blog.log('Exception on reconnect: ' + e.message + ", type: " + e.name);
+        try  {
+            self.reader.close();
+        } catch (e){
+            self.log('connection closed: ' + e.errno);
         }
-        
-        self.connect();
+
+        this.connect();
     },
     
     connect: function () {
         var self = this;
         
-        // sub.pipe(process.stdout);
-        self.publisher.connect(self.exchange, function () {
-            blog.log("AmqpCloudPublisher publish queue ready on " + self.exchange);
-            self.publisher.on('close', self.reconnect.bind(self));
+        try  {
+            // sub.pipe(process.stdout);
+            this.publisher.connect(self.exchange, function () {
+                self.log("ready on queue: " + self.exchange);
+                self.publisher.on('close', self.reconnect.bind(self));
+                self.publisher.on('error', self.reconnect.bind(self));
+                self.queueReady = true;
+                self.processQueue();
+            });
+
             self.publisher.on('error', self.reconnect.bind(self));
-            self.queueReady = true;
-            self.processQueue();
-        });
-        
-        self.publisher.on('error', self.reconnect.bind(self));
+        } catch (e) {
+            this.log("AmqpCloudPublisher: Error on connect: " + e.message);
+            // setTimeout(self.reconnect.bind(self), 200);
+        }
     },
     processQueue : function () {
         while (this.requestsQueue.length && this.queueReady) {
@@ -277,25 +326,45 @@ var AmqpCloudResultReader = {
     queue        : [],
 
     /* amqp state and objects */
-    context      : {},
+    context      : null,
+    currentUuid : '',
     reader    : {},
     queueReady   : false,
-
+    reconnecting : false,
+    logger : {},
+    log : function (data) {
+        this.logger.log(data);
+    },
     /* init reader */
     init: function (host, exchange, queue) {
         var self = this;
         self.host = host;
         self.exchange = exchange;
         self.queue = queue;
-
+        self.logger = Object.create(blog);
+        self.logger.prefix = 'Reader';
+        self.initContext();
+    },
+    
+    initContext : function () {
+        var self = this;
+        
+        self.log('initContext');
         self.context = rabbit.createContext(self.host, {durable: true, routing: 'direct'});
+        
+        var ctxtUuid = uuid.v4();
+        self.context.uuid = ctxtUuid;
+        
         self.context.on('ready', self.onInit.bind(self));
-        self.context.on('error', self.reconnect.bind(self));
+        self.context.on('error', function() {
+            self.onConnectionError(ctxtUuid);
+        });
     },
 
     onInit: function () {
         var self = this;
-        blog.log('AmqpCloudResultReader socket ready on host: '+ self.exchange + '@' + self.host);
+        this.log('socket ready at: ' + self.host);
+        
         self.reader = self.context.socket('PULL', {prefetch: 1});
         self.reader.setEncoding('utf8');
         self.connect();
@@ -304,33 +373,48 @@ var AmqpCloudResultReader = {
     onData: function (dataJson) {
         var data = JSON.parse(dataJson);
         
-        var uid = data.uid,
-            code = data.code,
-            head = data.head,
-            body = data.body
-        ;
-        
-        Requests.writeResponse(uid, code, head, body);
+        Requests.writeResponse(data.uid, data.code, data.head, data.body, data.state || {});
     },
-
-    reconnect: function () {
+    onConnectionError : function(uuid) {
         var self = this;
-        blog.log('AmqpCloudResultReader reconnect');
+        this.log('onConnectionError: ' + uuid);
+        
+        if (this.context.uuid == uuid && !self.reconnecting) {
+            self.reconnecting = setTimeout(function () {
+                self.reconnecting = false;
+                self.initContext();
+            }, 200);
+        }
+    },
+    reconnect: function (e) {
+        var self = this;
+        self.log('reconnect case: ' + JSON.stringify(e));
+        
         self.queueReady = false;
-        self.reader.close();
-        self.connect();
+        try  {
+            self.reader.close();    
+        } catch (e){
+            self.log('connection closed: ' + e.errno);
+        }
+        
+        this.connect();
     },
 
     connect: function () {
         var self = this;
-
-        self.reader.connect(self.exchange, function () {
-            blog.log("AmqpCloudResultReader read queue ready");
-            self.reader.on('close', self.reconnect.bind(self));
-            self.reader.on('data', self.onData.bind(self));
-            self.reader.on('error', self.reconnect.bind(self));
-            self.queueReady = true;
-        });
+        
+        try  {
+            self.reader.connect(self.exchange, function () {
+                self.log("ready on queue " + self.exchange);
+                self.reader.on('close', self.reconnect.bind(self));
+                self.reader.on('data', self.onData.bind(self));
+                self.reader.on('error', self.reconnect.bind(self));
+                self.queueReady = true;
+            });
+        } catch (e) {
+            self.log("Error on connect: " + e.message);
+            setTimeout(self.reconnect.bind(self), 200);
+        }
     }
 };
 
