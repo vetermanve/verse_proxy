@@ -79,6 +79,27 @@ var ReqPerformance = {
     }
 };
 
+var Haven = {
+    
+    routes : {
+        'user'    : 10,
+        'office'  : 4,
+        'api'     : 4,
+        'testing' : 2, 
+    },
+    
+    clouds : {},
+    
+    getCloud : function(name) {
+        if (!this.clouds[name]) {
+            var cloud = Object.create(AmqpCloudPublisher);
+            cloud.init('amqp://' + identity.amqpHost, identity.getPublishQueue(name), '', name);
+            this.clouds[name] = cloud;
+        }
+        
+        return this.clouds[name];
+    }
+};
 
 /**
  * Main Http consumer
@@ -133,7 +154,8 @@ var HttpHandler = {
         });
     },
     process : function (backendRequest) {
-        AmqpCloudPublisher.add(backendRequest);
+        var cloudName = Object.keys(Haven.routes)[0];
+        Haven.getCloud(cloudName).add(backendRequest);
         backendRequest.setData('cleared');
     }
 };
@@ -179,7 +201,7 @@ var Requests = {
         ReqPerformance.add(processing);
 
         res.shouldKeepAlive = false;
-
+        
         var cookies = backendRequest.cookies;
 
         try {
@@ -229,13 +251,13 @@ var AmqpCloudPublisher = {
     },
 
     /* init publisher */
-    init: function (host, exchange, queue) {
+    init: function (host, exchange, queue, cloud) {
         var self = this;
         self.host = host;
         self.exchange = exchange;
         self.queue = queue;
         self.logger = Object.create(blog);
-        self.logger.prefix = 'Publisher';
+        self.logger.prefix = 'Publisher ' + cloud;
         self.initContext();
     },
 
@@ -256,7 +278,7 @@ var AmqpCloudPublisher = {
 
     onConnectionError : function(uuid) {
         var self = this;
-        this.log('onConnectionError: ' + uuid);
+        this.log('onConnectionError: ' + uuid + ' to ' + this.host);
 
         if (this.context.uuid == uuid && !self.reconnecting) {
             self.reconnecting = setTimeout(function () {
@@ -440,7 +462,10 @@ blog.showDebugLogs = true;
 // var amqpHost = 'dev.alol.io';
 
 Requests.init();
-AmqpCloudPublisher.init('amqp://' + amqpHost, publishQueue, '');
+for (var cloudName in Haven.routes) {
+    Haven.getCloud(cloudName);
+}
+
 AmqpCloudResultReader.init('amqp://' + amqpHost, resultQueue, '');
 
 app.listen(9080);

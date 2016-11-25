@@ -12,20 +12,23 @@ var pmId = process.env.pm_id || uuid.v4();
 var cloudName = argv.cloud || 'local';
 var host = os.hostname().replace('.', "_");
 var dc = argv.dc || 'single_dc';
-var version = argv.version || 'v2';
+var amqpHost = argv.host || 'rabbit';
+var version = argv.version || '2';
 var cloud = cloudName + '_' + version;
 
 exports.identity = {
     dc : dc,
     host : host,
+    amqpHost : amqpHost,
     cloud : cloud,
     node : pmId,
+    version : version,
     ns : 'bpass',
     getNodeId : function () {
         return this.dc + '.' + this.host + '.' + this.node;
     },
-    getPublishQueue : function () {
-        return this.ns + '.' + this.dc + '.' + this.cloud;
+    getPublishQueue : function (cloud, version) {
+        return this.ns + '.' + this.dc + '.' + (cloud || this.cloud) + '_v' + (version || this.version);
     },
     getResultQueue : function () {
         return this.ns + '.' + this.getNodeId()
