@@ -12,7 +12,7 @@ var pmId = process.env.pm_id || uuid.v4();
 var cloudName = argv.cloud || 'local';
 var host = os.hostname().replace('.', "_");
 var dc = argv.dc || 'single_dc';
-var amqpHost = argv.host || 'rabbit';
+var amqpHost = argv.host || 'localhost';
 var version = argv.version || '2';
 var cloud = cloudName + '_' + version;
 
