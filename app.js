@@ -166,28 +166,33 @@ var Requests = {
     },
     writeResponse : function (uid, code, head, body, state) {
         var backendRequest = this.process.get(uid);
-        
+
         if (typeof backendRequest == 'undefined') {
-            blog.warn('uid ' + uid +' result object not found. Body skip');
+            blog.warn('uid ' + uid + ' result object not found. Body skip');
             return false;
         }
-        
+
         var res = backendRequest.resultStream;
         backendRequest.addTrace('Requests writeResponse');
-        
-        var processing = (Date.now() - backendRequest.born)/1000;
+
+        var processing = (Date.now() - backendRequest.born) / 1000;
         ReqPerformance.add(processing);
 
         res.shouldKeepAlive = false;
-        res.writeHead(code, head);
-        
-        var cookies = backendRequest.cookies; 
-        
-        var stateItem;
-        for (var stateKey in state) {
-            stateItem = state[stateKey];
-            cookies.set(stateKey, stateItem[0], { httpOnly: true, secure: true, expires : new Date(stateItem[1])})
+
+        var cookies = backendRequest.cookies;
+
+        try {
+            var stateItem;
+            for (var stateKey in state) {
+                stateItem = state[stateKey];
+                cookies.set(stateKey, stateItem[0], {httpOnly: true, expires: new Date(stateItem[1]*1000)})
+            }
+        } catch (e) {
+            blog.error(e);
         }
+        
+        res.writeHead(code, head);
         
         if (backendRequest.body.method !== 'OPTIONS' && backendRequest.body.method !== 'HEAD') {
             if (typeof body != 'string') {
@@ -270,7 +275,7 @@ var AmqpCloudPublisher = {
 
     add: function (backendRequest) {
         if (this.queueReady) {
-            this.debug("Sent request " + backendRequest.uid);
+            this.log("sent request " + backendRequest.uid);
             backendRequest.addTrace('AmqpCloudPublisher add');
             this.publisher.write(backendProtocol.pack(backendRequest), 'utf8');    
         } else {
@@ -359,6 +364,7 @@ var AmqpCloudResultReader = {
         self.context.on('error', function() {
             self.onConnectionError(ctxtUuid);
         });
+        
     },
 
     onInit: function () {
@@ -367,6 +373,7 @@ var AmqpCloudResultReader = {
         
         self.reader = self.context.socket('PULL', {prefetch: 1});
         self.reader.setEncoding('utf8');
+        
         self.connect();
     },
 

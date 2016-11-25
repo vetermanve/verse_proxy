@@ -9,7 +9,7 @@ var envArgs = require('minimist');
 var argv = process.env.args ? envArgs(process.env.args.split(' ')) : {};
 
 var pmId = process.env.pm_id || uuid.v4();
-var cloudName = argv.cloud || 'user';
+var cloudName = argv.cloud || 'local';
 var host = os.hostname().replace('.', "_");
 var dc = argv.dc || 'single_dc';
 var version = argv.version || 'v2';
