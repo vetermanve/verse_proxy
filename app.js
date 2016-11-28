@@ -462,15 +462,14 @@ var AmqpCloudResultReader = {
 //     });
 // });
 
-var resultQueue = identity.ns + '.' + identity.getNodeId();
-
 blog.showDebugLogs = true;
 
 Requests.init();
+
 for (var cloudName in Haven.routes) {
     Haven.getCloud(cloudName);
 }
 
-AmqpCloudResultReader.init('amqp://' + amqpHost, resultQueue, '');
+AmqpCloudResultReader.init('amqp://' + identity.amqpHost, identity.ns + '.' + identity.getNodeId(), '');
 
 app.listen(9080);
