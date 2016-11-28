@@ -206,9 +206,17 @@ var Requests = {
 
         try {
             var stateItem;
+            var domain = backendRequest.request.headers['origin'];
+            
+            if (domain) {
+                domain = domain.split('.').slice(-2).join('.') 
+            } else {
+                domain = '.alol.io'
+            }
+            
             for (var stateKey in state) {
                 stateItem = state[stateKey];
-                cookies.set(stateKey, stateItem[0], {httpOnly: true, expires: new Date(stateItem[1]*1000)})
+                cookies.set(stateKey, stateItem[0], {domain: domain, httpOnly: true, expires: new Date(stateItem[1]*1000)})
             }
         } catch (e) {
             blog.error(e);
@@ -454,12 +462,9 @@ var AmqpCloudResultReader = {
 //     });
 // });
 
-var publishQueue = identity.getPublishQueue();
 var resultQueue = identity.ns + '.' + identity.getNodeId();
-var amqpHost = 'localhost';
 
 blog.showDebugLogs = true;
-// var amqpHost = 'dev.alol.io';
 
 Requests.init();
 for (var cloudName in Haven.routes) {

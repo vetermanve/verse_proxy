@@ -6,10 +6,10 @@ var uuid = require("node-uuid");
 var os = require("os");
 var envArgs = require('minimist');
 
-var argv = process.env.args ? envArgs(process.env.args.split(' ')) : {};
+var argv = process.env.args ? envArgs(process.env.args.split(' ')) : process.env;
 
 var pmId = process.env.pm_id || uuid.v4();
-var cloudName = argv.cloud || 'local';
+var cloudName = argv.cloud  || 'local';
 var host = os.hostname().replace('.', "_");
 var dc = argv.dc || 'single_dc';
 var amqpHost = argv.host || 'localhost';
