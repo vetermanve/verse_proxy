@@ -5,6 +5,8 @@
       "script": "app.js",
       "instances": "max",
       "kill_timeout": 30000,
+      "error_file"  : "/dev/null",
+      "out_file"    : "/dev/null",
       "max_memory_restart" : "300M",
       "exec_mode" : "cluster"
     }
