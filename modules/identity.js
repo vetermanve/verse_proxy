@@ -26,8 +26,8 @@ exports.identity = {
     getNodeId : function () {
         return this.dc + '.' + this.host + '.' + this.node;
     },
-    getPublishQueue : function (cloud, version) {
-        return this.ns + '.' + this.dc + '.' + (cloud || this.cloud) + '_v' + (version || this.version);
+    getPublishQueue : function (cloud) {
+        return this.ns + '.' + this.dc + '.' + (cloud || this.cloud);
     },
     getResultQueue : function () {
         return this.ns + '.' + this.getNodeId()
