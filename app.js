@@ -80,12 +80,8 @@ var ReqPerformance = {
 };
 
 var Haven = {
-    
     routes : {
-        'user'    : 10,
-        'office'  : 4,
-        'api'     : 4,
-        'testing' : 2, 
+        'all' : 20
     },
     
     clouds : {},
