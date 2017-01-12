@@ -13,14 +13,13 @@ var cloudName = argv.cloud  || 'local';
 var host = os.hostname().replace('.', "_");
 var dc = argv.dc || 'dc';
 var amqpHost = argv.host || 'localhost';
-var version = argv.version || '2';
-var cloud = cloudName + '_' + version;
+var version = argv.version || 'all';
 
 exports.identity = {
     dc : dc,
     host : host,
     amqpHost : amqpHost,
-    cloud : cloud,
+    cloud : cloudName,
     node : pmId,
     version : version,
     ns : 'bpass',
