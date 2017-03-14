@@ -185,6 +185,8 @@ var Requests = {
     writeResponse : function (uid, code, head, body, state) {
         var backendRequest = this.process.get(uid);
 
+        code = code || 503;
+
         if (typeof backendRequest == 'undefined') {
             blog.warn('uid ' + uid + ' result object not found. Body skip');
             return false;
@@ -311,13 +313,13 @@ var AmqpCloudPublisher = {
 
     reconnect: function (e) {
         var self = this;
-        self.log('reconnect case: ' + JSON.stringify(e));
+        self.log('reconnect case: ' + e);
 
         self.queueReady = false;
         try  {
             self.reader.close();
         } catch (e){
-            self.log('connection closed: ' + e.errno);
+            self.log('connection close error: ' + e.errno);
         }
 
         this.connect();
@@ -404,9 +406,13 @@ var AmqpCloudResultReader = {
     },
 
     onData: function (dataJson) {
-        var data = JSON.parse(dataJson);
-        
-        Requests.writeResponse(data.uid, data.code, data.head, data.body, data.state || {});
+        var self = this;
+        try {
+            var data = JSON.parse(dataJson);
+            Requests.writeResponse(data.uid, data.code, data.head, data.body, data.state || {});    
+        } catch (e) {
+            self.log('Error write response: ' + dataJson + ', error: ' + e);
+        }
     },
     onConnectionError : function(uuid) {
         var self = this;
@@ -421,13 +427,13 @@ var AmqpCloudResultReader = {
     },
     reconnect: function (e) {
         var self = this;
-        self.log('reconnect case: ' + JSON.stringify(e));
+        self.log('reconnect case: ' + e);
         
         self.queueReady = false;
         try  {
             self.reader.close();    
         } catch (e){
-            self.log('connection closed: ' + e.errno);
+            self.log('connection closed: ' + e);
         }
         
         this.connect();
