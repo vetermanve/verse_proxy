@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 
-if [ -f /tmp/bpass.config.link ]; then
-    config=$(readlink -n /tmp/bpass.config)
-    echo "Stoppping ${config} by copy"
-    pm2 delete /tmp/bpass.config
-    echo "Stopped ${config}"
+curConfigLink="/tmp/bpass.config.link"
+
+if [ -f ${curConfigLink} ]; then
+    oldConfigFile=$(readlink -n ${curConfigLink})
+    echo "Stoppping ${oldConfigFile} ..."
+    pm2 delete ${oldConfigFile}
+    echo "Stopped ${oldConfigFile}."
 fi
 
-curConfig=$(readlink -n ./cluster/config/cluster.json)
-echo "Starting config ${curConfig} !";
+pwd=$(pwd -P);
 
-#pwd=$(pwd -P);
-#
-#rm /tmp/bpass.config.link
-#ln -s ${pwd}/cluster/config/cluster.json /tmp/bpass.config.link 
-#cp ${pwd}/cluster.json /tmp/bpass.config 
-#pm2 start cluster.json
+configDir=${pwd}"/cluster/config/";
+curConfig=$(readlink -n ${configDir}cluster.json)
+configPath=${configDir}${curConfig}
+echo "Starting config ${configPath}";
+
+
+rm /tmp/bpass.config.link
+ln -s ${configPath} /tmp/bpass.config.link 
+pm2 start ${configPath}
