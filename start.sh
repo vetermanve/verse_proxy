@@ -7,9 +7,12 @@ if [ -f /tmp/bpass.config.link ]; then
     echo "Stopped ${config}"
 fi
 
-pwd=$(pwd -P);
-echo "Starting ${pwd}/cluster.json";
-rm /tmp/bpass.config.link
-ln -s ${pwd}/cluster.json /tmp/bpass.config.link 
-cp ${pwd}/cluster.json /tmp/bpass.config 
-pm2 start cluster.json
+curConfig=$(readlink -n ./cluster/config/cluster.json)
+echo "Starting config ${curConfig} !";
+
+#pwd=$(pwd -P);
+#
+#rm /tmp/bpass.config.link
+#ln -s ${pwd}/cluster/config/cluster.json /tmp/bpass.config.link 
+#cp ${pwd}/cluster.json /tmp/bpass.config 
+#pm2 start cluster.json

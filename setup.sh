@@ -4,5 +4,5 @@
 #ps -ef | grep "node ./app.js" | grep -v grep | awk '{print $2}' | xargs kill -9
 
 echo "Generate config ..."
-node configGeneration.js
+node cluster/configGeneration.js
 echo "Config generated."
