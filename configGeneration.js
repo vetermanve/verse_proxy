@@ -10,7 +10,7 @@ var releaseData = {
     "release": "local_dev"
 };
 try {
-    var releaseData = require('release.json');
+    releaseData = require('./release.json');
 } catch (e) {
     console.log('Release file not found');
 }
@@ -30,4 +30,4 @@ var config = {
 
 fs.writeFileSync('cluster.json', JSON.stringify(config, null, 2));
 
-console.log(releaseInfo);
+console.log(releaseData);
