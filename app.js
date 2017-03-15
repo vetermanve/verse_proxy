@@ -13,12 +13,23 @@ var uuid = require("node-uuid");
 var blog = {
     prefix : null,
     showDebugLogs : false,
+    prefixLen : 13,
+    startTime : 0,
     log : function (info, warn ) {
         warn = warn || false;
         if (!this.prefix) {
             this.prefix = identity.getNodeId()       
         }
-        info = this.prefix + '> ' + (typeof info != 'string' ? JSON.stringify(info, null, 4) : info);
+        
+        if (!blog.startTime) {
+            blog.startTime = Date.now();
+        }
+        
+        if (this.prefix.length < this.prefixLen) {
+            this.prefix += (new Array(this.prefixLen - this.prefix.length + 1).join(' '));
+        }
+        
+        info = this.prefix + ' [' + Math.round((Date.now()- blog.startTime))/1000  + '] > ' + (typeof info != 'string' ? JSON.stringify(info, null, 4) : info);
         
         if (warn) {
             console.warn(info);
@@ -103,6 +114,14 @@ var Haven = {
  * @type {{handle: HttpHandler.handle}}
  */
 var HttpHandler = {
+    logger : {},
+    log : function (data) {
+        this.logger.log(data);
+    },
+    init : function () {
+        this.logger = Object.create(blog);
+        this.logger.prefix = 'HttpHandler';
+    },
     handle: function (httpRequest, httpResult) {
         var urlData = url.parse(httpRequest.url);
 
@@ -128,7 +147,8 @@ var HttpHandler = {
         backendRequest.body.headers= httpRequest.headers;
 
         Requests.register(backendRequest);
-        blog.log(backendRequest.body);
+        // this.log(backendRequest.body);
+        this.log('Incoming request ' + backendRequest.uid + ' ' + backendRequest.body.method + ' ' + backendRequest.body.path);
 
         if (method == 'POST' || method == 'PUT') {
             this.catchBody(httpRequest, backendRequest);
@@ -303,7 +323,7 @@ var AmqpCloudPublisher = {
 
     add: function (backendRequest) {
         if (this.queueReady) {
-            this.log("sent request " + backendRequest.uid);
+            this.log("Sent request: " + backendRequest.uid);
             backendRequest.addTrace('AmqpCloudPublisher add');
             this.publisher.write(backendProtocol.pack(backendRequest), 'utf8');    
         } else {
@@ -409,6 +429,7 @@ var AmqpCloudResultReader = {
         var self = this;
         try {
             var data = JSON.parse(dataJson);
+            self.log('Read response: ' + data.uid);
             Requests.writeResponse(data.uid, data.code, data.head, data.body, data.state || {});    
         } catch (e) {
             self.log('Error write response: ' + dataJson + ', error: ' + e);
@@ -444,7 +465,7 @@ var AmqpCloudResultReader = {
         
         try  {
             self.reader.connect(self.exchange, function () {
-                self.log("ready on queue " + self.exchange);
+                self.log("ready on queue: " + self.exchange);
                 self.reader.on('close', self.reconnect.bind(self));
                 self.reader.on('data', self.onData.bind(self));
                 self.reader.on('error', self.reconnect.bind(self));
@@ -467,6 +488,7 @@ var AmqpCloudResultReader = {
 blog.showDebugLogs = true;
 
 Requests.init();
+HttpHandler.init();
 
 for (var cloudName in Haven.routes) {
     Haven.getCloud(cloudName);
