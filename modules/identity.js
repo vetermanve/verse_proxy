@@ -10,7 +10,7 @@ var argv = process.env.args ? envArgs(process.env.args.split(' ')) : process.env
 
 var pmId = process.env.pm_id || uuid.v4();
 var cloudName = argv.cloud  || 'local';
-var host = os.hostname().replace('.', "_");
+var host = os.hostname().replace('.', "_").toLowerCase();
 var dc = argv.dc || 'dc';
 var amqpHost = argv.host || 'localhost';
 var version = argv.version || 'all';

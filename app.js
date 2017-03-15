@@ -100,7 +100,7 @@ var Haven = {
     getCloud : function(name) {
         if (!this.clouds[name]) {
             var cloud = Object.create(AmqpCloudPublisher);
-            cloud.init('amqp://' + identity.amqpHost, identity.getPublishQueue(name), '', name);
+            cloud.init('amqp://' + identity.amqpHost, identity.getPublishQueue(name), name);
             this.clouds[name] = cloud;
         }
         
@@ -260,8 +260,7 @@ var Requests = {
 var AmqpCloudPublisher = {
     /* amqp connection meta */
     host         : '',
-    exchange     : '',
-    queue        : [],
+    queue        : '',
     
     /* amqp state and objects */
     context      : {},
@@ -277,11 +276,10 @@ var AmqpCloudPublisher = {
     },
 
     /* init publisher */
-    init: function (host, exchange, queue, cloud) {
+    init: function (host, queue, cloud) {
         var self = this;
         self.host = host;
-        self.exchange = exchange;
-        self.queue = queue;
+        self.queue = queue.toLowerCase();
         self.logger = Object.create(blog);
         self.logger.prefix = 'Publisher ' + cloud;
         self.initContext();
@@ -310,7 +308,7 @@ var AmqpCloudPublisher = {
             self.reconnecting = setTimeout(function () {
                 self.reconnecting = false;
                 self.initContext();
-            }, 200);
+            }, 500);
         }
     },
 
@@ -327,6 +325,7 @@ var AmqpCloudPublisher = {
             backendRequest.addTrace('AmqpCloudPublisher add');
             this.publisher.write(backendProtocol.pack(backendRequest), 'utf8');    
         } else {
+            this.log("Postpone request: " + backendRequest.uid);
             this.requestsQueue.push(backendRequest);      
         }
     },
@@ -350,8 +349,8 @@ var AmqpCloudPublisher = {
         
         try  {
             // sub.pipe(process.stdout);
-            this.publisher.connect(self.exchange, function () {
-                self.log("ready on queue: " + self.exchange);
+            this.publisher.connect(self.queue, function () {
+                self.log("ready on queue: " + self.queue);
                 self.publisher.on('close', self.reconnect.bind(self));
                 self.publisher.on('error', self.reconnect.bind(self));
                 self.queueReady = true;
@@ -361,7 +360,7 @@ var AmqpCloudPublisher = {
             self.publisher.on('error', self.reconnect.bind(self));
         } catch (e) {
             this.log("AmqpCloudPublisher: Error on connect: " + e.message);
-            // setTimeout(self.reconnect.bind(self), 200);
+            setTimeout(self.reconnect.bind(self), 500);
         }
     },
     processQueue : function () {
@@ -375,8 +374,7 @@ var AmqpCloudPublisher = {
 var AmqpCloudResultReader = {
     /* amqp connection meta */
     host         : '',
-    exchange     : '',
-    queue        : [],
+    queue        : '',
 
     /* amqp state and objects */
     context      : null,
@@ -389,11 +387,10 @@ var AmqpCloudResultReader = {
         this.logger.log(data);
     },
     /* init reader */
-    init: function (host, exchange, queue) {
+    init: function (host, queue) {
         var self = this;
         self.host = host;
-        self.exchange = exchange;
-        self.queue = queue;
+        self.queue = queue.toLowerCase();
         self.logger = Object.create(blog);
         self.logger.prefix = 'Reader';
         self.initContext();
@@ -429,7 +426,7 @@ var AmqpCloudResultReader = {
         var self = this;
         try {
             var data = JSON.parse(dataJson);
-            self.log('Read response: ' + data.uid);
+            self.log('Read response: ' + data.uid + ' from ' + data.from);
             Requests.writeResponse(data.uid, data.code, data.head, data.body, data.state || {});    
         } catch (e) {
             self.log('Error write response: ' + dataJson + ', error: ' + e);
@@ -443,7 +440,7 @@ var AmqpCloudResultReader = {
             self.reconnecting = setTimeout(function () {
                 self.reconnecting = false;
                 self.initContext();
-            }, 200);
+            }, 500);
         }
     },
     reconnect: function (e) {
@@ -464,8 +461,8 @@ var AmqpCloudResultReader = {
         var self = this;
         
         try  {
-            self.reader.connect(self.exchange, function () {
-                self.log("ready on queue: " + self.exchange);
+            self.reader.connect(self.queue, function () {
+                self.log("ready on queue: " + self.queue);
                 self.reader.on('close', self.reconnect.bind(self));
                 self.reader.on('data', self.onData.bind(self));
                 self.reader.on('error', self.reconnect.bind(self));
@@ -473,7 +470,7 @@ var AmqpCloudResultReader = {
             });
         } catch (e) {
             self.log("Error on connect: " + e.message);
-            setTimeout(self.reconnect.bind(self), 200);
+            setTimeout(self.reconnect.bind(self), 500);
         }
     }
 };
@@ -494,6 +491,6 @@ for (var cloudName in Haven.routes) {
     Haven.getCloud(cloudName);
 }
 
-AmqpCloudResultReader.init('amqp://' + identity.amqpHost, identity.ns + '.' + identity.getNodeId(), '');
+AmqpCloudResultReader.init('amqp://' + identity.amqpHost, identity.ns + '.' + identity.getNodeId());
 
 app.listen(9080);
