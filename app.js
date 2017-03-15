@@ -6,7 +6,7 @@ var url = require("url");
 var rabbit = require('rabbit.js');
 var identity = require('./modules/identity.js').identity;
 var backendProtocol = require('./modules/restRequest.js');
-var uuid = require("node-uuid");
+var uuid = require("uuid");
 
 // var HashTable = require('hashtable');
 
