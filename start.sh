@@ -9,7 +9,7 @@ fi
 
 pwd=$(pwd -P);
 echo "Starting ${pwd}/cluster.json";
-rm /tmp/bpass.config
+rm /tmp/bpass.config.link
 ln -s ${pwd}/cluster.json /tmp/bpass.config.link 
 cp ${pwd}/cluster.json /tmp/bpass.config 
 pm2 start cluster.json
