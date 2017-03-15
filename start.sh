@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 if [ -f /tmp/bpass.config ]; then
-    config=$(readlink -n /tmp/bpass.config);
-    echo "Stoppping ${config}";
-    pm2 delete ${config}; 
+    config=$(readlink -n /tmp/bpass.config)
+    echo "Stoppping ${config}"
+    pm2 delete ${config}
+    echo "Stopped ${config}"
 fi
 
 pwd=$(pwd -P);
