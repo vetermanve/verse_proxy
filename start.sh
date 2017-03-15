@@ -3,7 +3,7 @@
 if [ -f /tmp/bpass.config ]; then
     config=$(readlink -n /tmp/bpass.config);
     echo "Stoppping ${config}";
-    pm2 remove ${config}; 
+    pm2 delete ${config}; 
 fi
 
 pwd=$(pwd -P);
