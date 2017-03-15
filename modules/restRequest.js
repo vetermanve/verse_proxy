@@ -1,7 +1,7 @@
 /**
  * Created by vetermanve on 09.11.16.
  */
-var uuid = require("node-uuid");
+var uuid = require("uuid");
 
 var BackendRequest = function (method, path, query, reply) {
     var self = this;

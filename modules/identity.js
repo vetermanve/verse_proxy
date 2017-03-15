@@ -2,7 +2,7 @@
  * Created by vetermanve on 09.11.16.
  */
 
-var uuid = require("node-uuid");
+var uuid = require("uuid");
 var os = require("os");
 var envArgs = require('minimist');
 
