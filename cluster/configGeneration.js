@@ -44,9 +44,12 @@ fs.writeFileSync(configDir + targetFile, JSON.stringify(config, null, 2));
 console.log('Unlink ' + (fs.existsSync(targetLink) ? 'Y' : 'N'));
 
 var targetLink = configDir + 'cluster.json'; 
-if (fs.readlinkSync(targetLink)) {
-    fs.unlinkSync(targetLink);
-}
+try  {
+    if (fs.readlinkSync(targetLink)) {
+        fs.unlinkSync(targetLink);
+    }  
+} catch (e) { }
+
 fs.symlinkSync(targetFile, targetLink);
 
 // show release data

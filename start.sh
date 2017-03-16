@@ -12,11 +12,17 @@ fi
 pwd=$(pwd -P);
 
 configDir=${pwd}"/cluster/config/";
-curConfig=$(readlink -n ${configDir}cluster.json)
-configPath=${configDir}${curConfig}
-echo "Starting config ${configPath}";
+configLink=${configDir}cluster.json;
+curConfig=$(readlink -n ${configLink})
 
-
-rm /tmp/bpass.config.link
-ln -s ${configPath} /tmp/bpass.config.link 
-pm2 start ${configPath}
+if [ ${curConfig}  ]; then
+    configPath=${configDir}${curConfig}
+    echo "Starting config ${configPath}";
+    
+    
+    rm /tmp/bpass.config.link
+    ln -s ${configPath} /tmp/bpass.config.link 
+    pm2 start ${configPath}
+  else
+    echo "Config file ${configLink} not found. Not started.";
+fi
