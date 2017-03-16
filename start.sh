@@ -4,9 +4,6 @@ curConfigLink="/tmp/bpass.config.link"
 
 if [ -f ${curConfigLink} ]; then
     oldConfigFile=$(readlink -n ${curConfigLink})
-    echo "Stoppping ${oldConfigFile} ..."
-    pm2 delete ${oldConfigFile}
-    echo "Stopped ${oldConfigFile}."
 fi
 
 pwd=$(pwd -P);
@@ -23,6 +20,13 @@ if [ ${curConfig}  ]; then
     rm /tmp/bpass.config.link
     ln -s ${configPath} /tmp/bpass.config.link 
     pm2 start ${configPath}
+    
+    if [ ${oldConfigFile} ]; then
+        echo "Stoppping ${oldConfigFile} ..."
+        pm2 delete ${oldConfigFile}
+        echo "Stopped ${oldConfigFile}."
+    fi
+    
   else
     echo "Config file ${configLink} not found. Not started.";
 fi
