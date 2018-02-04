@@ -240,8 +240,10 @@ var Requests = {
         res.writeHead(code, head);
         
         if (backendRequest.body.method !== 'OPTIONS' && backendRequest.body.method !== 'HEAD') {
-            if (typeof body != 'string') {
-                body.p_time = processing ;
+            if (typeof body === 'object') {
+                try  {
+                    body.p_time = processing;    
+                } catch (e) {}
                 res.write(JSON.stringify(body));
             } else {
                 res.write(body);
