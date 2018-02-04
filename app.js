@@ -224,13 +224,10 @@ var Requests = {
 
         try {
             var stateItem;
-            var domain = backendRequest.request.headers['origin'];
+            var origin = backendRequest.request.headers['origin'] || '';
+            var domain = url.parse(origin).hostname;
             
-            if (domain) {
-                domain = domain.split('.').slice(-2).join('.') 
-            } else {
-                domain = '.alol.io'
-            }
+            domain = domain.split('.').slice(-2).join('.'); 
             
             for (var stateKey in state) {
                 stateItem = state[stateKey];
