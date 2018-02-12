@@ -7,6 +7,7 @@ var os = require("os");
 var envArgs = require('minimist');
 
 var argv = process.env.args ? envArgs(process.env.args.split(' ')) : process.env;
+console.log(argv);
 
 var pmId = process.env.pm_id || uuid.v4();
 var cloudName = argv.cloud  || 'local';

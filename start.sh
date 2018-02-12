@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-curConfigLink="/tmp/bpass.config.link"
+curConfigLink="/srv/www/conf/bpass.config.link"
 
 if [ -f ${curConfigLink} ]; then
     oldConfigFile=$(readlink -n ${curConfigLink})
@@ -12,19 +12,26 @@ configDir=${pwd}"/cluster/config/";
 configLink=${configDir}cluster.json;
 curConfig=$(readlink -n ${configLink})
 
+echo ${curConfig} ${oldConfigFile}
+
 if [ ${curConfig}  ]; then
     configPath=${configDir}${curConfig}
-    echo "Starting config ${configPath}";
-    
-    
-    rm /tmp/bpass.config.link
-    ln -s ${configPath} /tmp/bpass.config.link 
-    pm2 start ${configPath}
-    
     if [ ${oldConfigFile} ]; then
-        echo "Stoppping ${oldConfigFile} ..."
-        pm2 delete ${oldConfigFile}
-        echo "Stopped ${oldConfigFile}."
+        if [ $(stat -f "%d:%i" ${configPath}) != $(stat -f "%d:%i" ${oldConfigFile}) ]; then
+            echo "Starting config ${configPath}";
+            
+            pm2 start ${configPath}
+        
+            echo "Stoppping ${oldConfigFile} ..."
+            pm2 delete ${oldConfigFile}
+            rm ${curConfigLink}
+            ln -s ${configPath} ${curConfigLink} 
+            
+            echo "Stopped ${oldConfigFile}."
+        else
+            echo "Self restart detected."
+            pm2 startOrRestart ${configPath}
+        fi
     fi
     
   else

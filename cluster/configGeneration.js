@@ -7,7 +7,8 @@ var fs = require('fs');
 var releaseData = {
     "id"     : Date.now(),
     "date"   : "today",
-    "release": "local_dev"
+    "release": "local_dev",
+    "slot"   : "dc"
 };
 try {
     releaseData = require('../release.json');
@@ -24,7 +25,10 @@ var config = {
         "error_file"        : "/dev/null",
         "out_file"          : "/dev/null",
         "max_memory_restart": "300M",
-        "exec_mode"         : "cluster"
+        "exec_mode"         : "cluster",
+        "env": {
+            "dc": releaseData.slot
+        }
     }]
 };
 
