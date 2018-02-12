@@ -17,7 +17,7 @@ echo ${curConfig} ${oldConfigFile}
 if [ ${curConfig}  ]; then
     configPath=${configDir}${curConfig}
     if [ ${oldConfigFile} ]; then
-        if [ $(stat -f "%d:%i" ${configPath}) != $(stat -f "%d:%i" ${oldConfigFile}) ]; then
+        if [ ${configPath} != $(readlink -n ${curConfigLink}) ]; then
             echo "Starting config ${configPath}";
             
             pm2 start ${configPath}
