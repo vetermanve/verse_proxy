@@ -13,7 +13,7 @@ oldConfig=$(readlink -n ${curConfigLink})
 if [ ${curConfig}  ]; then
     echo "We has a config ${curConfig}";
     configPath=${configDir}${curConfig}
-    if [ ${configPath} != ${oldConfig} ]; then
+    if [ "${configPath}" != "${oldConfig}" ]; then
         echo "Starting new config ${configPath}";
         
         pm2 start ${configPath}
