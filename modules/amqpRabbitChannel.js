@@ -176,8 +176,6 @@ var AmqpCloudResultReader = {
 
             if (Requests.has(data.uid)) {
                 Requests.writeResponse(data.uid, data.code, data.head, data.body, data.state || {});
-            } else if (SocketRequests.has(data.uid)) {
-                SocketRequests.writeResponse(data.uid, data.code, data.head, data.body, data.state || {});
             } else {
                 blog.warn('Message ' + data.uid + ' was not sent to client: no subscribers found.');
             }

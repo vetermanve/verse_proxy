@@ -130,7 +130,11 @@ var Requests = {
 blog.showDebugLogs = true;
 
 var HttpHandler = httpHandlerCreate(blog, function (data) {
-    console.log("Http requested");
+    // request set reply
+    // Requests.register(backendRequest);
+    console.log("Http requested", data);
+    data.setReply(identity.getResultQueue());
+    
 });
 
 Haven.init(identity);

@@ -18,7 +18,7 @@ var BackendRequest = function (method, path, query, reply) {
         headers : {},
         data : {}, 
         
-        reply: reply,
+        reply: reply || '',
         born : born
     };
     
@@ -33,6 +33,10 @@ var BackendRequest = function (method, path, query, reply) {
     
     self.addTrace = function (point) {
         self.trace.push([Date.now() - self.born, point]);
+    };
+    
+    self.setReply = function (replyTo) {
+        self.body.reply = replyTo;
     };
     
     self.resultStream = {};

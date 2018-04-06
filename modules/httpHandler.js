@@ -61,15 +61,12 @@ var HttpHandler = {
 
         var method = httpRequest.method;
 
-        var backendRequest = backendProtocol.buildRequestObj(httpRequest.method, urlData.pathname, urlData.query, 
-            identity.getResultQueue() // @fixme протекшая абстракция + ошибка
-        );
+        var backendRequest = backendProtocol.buildRequestObj(httpRequest.method, urlData.pathname, urlData.query);
         backendRequest.resultStream = httpResult;
         backendRequest.request = httpRequest;
         backendRequest.cookies = new Cookies(backendRequest.request, backendRequest.resultStream);
         backendRequest.body.headers= httpRequest.headers;
-
-        Requests.register(backendRequest);
+        
         // this.log(backendRequest.body);
         this.log('Incoming request ' + backendRequest.uid + ' ' + backendRequest.body.method + ' ' + backendRequest.body.path);
 
@@ -109,6 +106,46 @@ var HttpHandler = {
         }
         
         backendRequest.setData('cleared');
+    },
+    writeResponse : function (backendRequest, uid, code, head, body, state) {
+        var res = backendRequest.resultStream;
+        backendRequest.addTrace('Requests writeResponse');
+
+        var processing = (Date.now() - backendRequest.born) / 1000;
+        
+        var cookies = backendRequest.cookies;
+
+        try {
+            var stateItem;
+            var origin = backendRequest.request.headers['origin'] || '';
+            var domain = url.parse(origin).hostname;
+
+            domain = domain.split('.').slice(-2).join('.'); // TODO move cookie domain calculation anywhere 
+            
+            for (var stateKey in state) {
+                stateItem = state[stateKey];
+                cookies.set(stateKey, stateItem[0], {domain: domain, httpOnly: true, expires: new Date(stateItem[1]*1000)})
+            }
+        } catch (e) {
+            this.logger.error(e);
+        }
+        
+        head = head || [];
+        head.push("x-proxy-full-time: " + processing);
+
+        res.writeHead(code, head);
+
+        if (backendRequest.body.method !== 'OPTIONS' && backendRequest.body.method !== 'HEAD') {
+            if (typeof body === 'object') {
+                res.write(JSON.stringify(body));
+            } else {
+                res.write(body);
+            }
+        }
+
+        res.end();
+
+        this.process.delete(uid);
     }
 };
 
