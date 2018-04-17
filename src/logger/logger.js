@@ -11,6 +11,9 @@ class Logger {
     static setPrefixMaxLen(length) {
         this._prefixMaxLen = length;
     }
+    set prefix (prefix) {
+        this.setPrefix(prefix)
+    }
     static getPrefixMaxLength() {
         if (!this._prefixMaxLen) {
             this._prefixMaxLen = 13;
@@ -19,17 +22,21 @@ class Logger {
         return this._prefixMaxLen;
     }
     constructor (prefix) {
-        this._prefix = prefix || '';
+        this.setPrefix(prefix);
         this._showDebugLogs = false;
     }
-    set prefix(value) {
-        if (this._prefix.length < Logger.getPrefixMaxLength()) {
-            this._prefix += (new Array(Logger.getPrefixMaxLength() - this._prefix.length + 1).join(' '));
+    setPrefix(value) {
+        if (value.length < Logger.getPrefixMaxLength()) {
+            value += (new Array(Logger.getPrefixMaxLength() - value.length + 1).join(' '));
         }
         this._prefix = value;
     }
     getMessage(info) {
-        return this._prefix + ' [' + Logger.getTimeFromStart()  + '] > ' + (typeof info !== 'string' ? JSON.stringify(info, null, 4) : info);
+        try  {
+            return this._prefix + ' [' + Logger.getTimeFromStart()  + '] > ' + (typeof info !== 'string' ? JSON.stringify(info, null, 4) : info);    
+        } catch (e) {
+            return this._prefix + ' [' + Logger.getTimeFromStart()  + '] > ' +  "Logger Error: " + e.message;  
+        }
     }
     log (info) {
         console.log(this.getMessage(info));
