@@ -9,6 +9,7 @@ class ClientRequest {
         this.data = data || {};
         this.headers = headers || {};
         this.state = state || {};
+        this.born = Date.now()/1000;
     }
 }
 

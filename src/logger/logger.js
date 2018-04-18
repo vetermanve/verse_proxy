@@ -6,7 +6,7 @@ class Logger {
             this._startTime = Date.now();
         }
         
-        return Math.round((Date.now()- this._startTime))/1000;
+        return (Math.round(Date.now() - this._startTime)/1000).toFixed(3);
     }
     static setPrefixMaxLen(length) {
         this._prefixMaxLen = length;
@@ -21,9 +21,9 @@ class Logger {
         
         return this._prefixMaxLen;
     }
-    constructor (prefix) {
+    constructor (prefix, showDebugLogs) {
         this.setPrefix(prefix);
-        this._showDebugLogs = false;
+        this._showDebugLogs = showDebugLogs || false;
     }
     setPrefix(value) {
         if (value.length < Logger.getPrefixMaxLength()) {
@@ -49,7 +49,7 @@ class Logger {
     }
     debug (info) {
         if (this._showDebugLogs) {
-            this.log(this.getMessage(info));
+            this.log(info);
         }
     }
 }
