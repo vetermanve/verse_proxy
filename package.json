@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "amqplib": "^0.5.2",
-    "cookies": "^0.7.1",
+    "cookie": "^0.3.1",
     "http": "0.0.0",
     "minimist": "^1.2.0",
     "rabbit.js": "^0.4.4",

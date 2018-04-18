@@ -1,13 +1,14 @@
 const uuidv4 = require('uuid/v4');
 
 class ClientRequest {
-    constructor (uuid, method, path, query, data, headers) {
+    constructor (uuid, method, path, query, data, headers, state) {
         this.uuid = uuid || uuidv4();
         this.method = method;
         this.path = path || '';
         this.query = query || '';
         this.data = data || {};
         this.headers = headers || {};
+        this.state = state || {};
     }
 }
 

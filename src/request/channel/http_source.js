@@ -1,7 +1,7 @@
 const AbstractRequestSource = require("./source_proto");
 const http = require("http");
 const url = require("url");
-const Cookies = require( "cookies");
+const Cookie = require( "cookie");
 const Request = require("../client_request");
 
 class HttpRequestChannel extends AbstractRequestSource {
@@ -64,18 +64,9 @@ class HttpRequestChannel extends AbstractRequestSource {
         }
 
         
-
-        // let backendRequest = backendProtocol.buildRequestObj(httpRequest.method, urlData.pathname, urlData.query);
-        // backendRequest.resultStream = httpResult;
-        // backendRequest.request = httpRequest;
-        // backendRequest.cookies = new Cookies(backendRequest.request, backendRequest.resultStream);
-        // backendRequest.body.headers= httpRequest.headers;
-        //
-        // // this.log(backendRequest.body);
-        // this.log('Incoming request ' + backendRequest.uid + ' ' + backendRequest.body.method + ' ' + backendRequest.body.path);
-        //
-        
-        let clientRequest = new Request(null, httpRequest.method, urlData.pathname, urlData.query);
+        let cookies = Cookie.parse(httpRequest.headers.cookie || '');
+        let clientRequest = new Request(null, httpRequest.method, urlData.pathname, urlData.query, '', httpRequest.headers, cookies);
+        self.logger.debug(clientRequest);
 
         let requestBody = [];
         
