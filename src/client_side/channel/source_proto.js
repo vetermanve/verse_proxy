@@ -3,8 +3,10 @@
  * @author me@vetermanve.com 
  **/
 class AbstractRequestSource {
-    
-    constructor() {
+    constructor (processing, port) {
+        this._processing = processing;
+        this.port = port || 9080;
+        this.server = {};
         this._logger = {};
     }
     get logger () {
@@ -12,6 +14,12 @@ class AbstractRequestSource {
     }
     set logger (logger) {
         this._logger = logger
+    }
+    set processing(callable) {
+        this._processing = callable;
+    }
+    get processing () {
+        return this._processing;
     }
     init () {
         this.logger.log('Abstract Init');
