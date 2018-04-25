@@ -1,4 +1,5 @@
 const HttpRequestSource = require("./client_side/channel/http_source");
+const SocketSource = require("./client_side/channel/socketio_source");
 const Logger = require("./logger/logger");
 
 const StackHandler = require('./server_side/handler/stack_handler');
@@ -12,22 +13,22 @@ Logger.setPrefixMaxLen(18);
 let logger = new Logger("Core");
 logger.log("This is a start!");
 
-// Create server
-let server = new HttpRequestSource();
-server.logger = new Logger("HttpRequestChannel", true);
-
-// Create handler
 let handler = new StackHandler();
 handler.addHandler(new FileHandler(__dirname + '/../public'));
 handler.addHandler(new NotFoundHandler());
 
-// Bind handler
-server.processing = function (clientRequest, writeBack) {
+let processing = function (clientRequest, writeBack) {
     handler.handle(clientRequest, writeBack);
 };
 
-// Init server
+// Create server
+let server = new HttpRequestSource(processing, 9080);
+server.logger = new Logger("HttpRequestChannel", false);
 server.init();
-
-// Start server
 server.start();
+
+let socketServer = new SocketSource(processing, 9081);
+socketServer.logger = new Logger("SocketChannel", true);
+socketServer.init();
+socketServer.start();
+

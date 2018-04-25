@@ -45,10 +45,10 @@ class FileHandler extends AbstractHandler {
         }
 
         const ext = path.parse(pathname).ext;
-        const data = fs.readFileSync(pathname).toString();
-        
-        let response = new Response(200, data, {'Content-type' : FileHandler.getMimeType(ext)});
-        writeBack(response);
+        const data = fs.readFile(pathname, {}, function (error, data) {
+            let response = new Response(200, data.toString(), {'Content-type' : FileHandler.getMimeType(ext)});
+            writeBack(response);
+        });
         
         return true;
     }
