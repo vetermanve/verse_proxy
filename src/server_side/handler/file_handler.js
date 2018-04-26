@@ -46,7 +46,7 @@ class FileHandler extends AbstractHandler {
 
         const ext = path.parse(pathname).ext;
         const data = fs.readFile(pathname, {}, function (error, data) {
-            let response = new Response(200, data.toString(), {'Content-type' : FileHandler.getMimeType(ext)});
+            let response = new Response(200, data.toString(), {'Content-type' : FileHandler.getMimeType(ext)}, {}, null, clientRequest.uuid);
             writeBack(response);
         });
         
