@@ -1,8 +1,8 @@
-const AbstractSource = require("./source_proto");
+const AbstractSource = require("./AbstractRequestSource");
 const http = require('http');
 const createSocketIo = require('socket.io');
 
-const Request = require("../model/client_request");
+const Request = require("../model/ClientRequest");
 
 class SocketSource extends AbstractSource {
     init() {

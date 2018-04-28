@@ -1,9 +1,9 @@
-const AbstractRequestSource = require("./source_proto");
+const AbstractRequestSource = require("./AbstractRequestSource");
 const http = require("http");
 const url = require("url");
 const Cookie = require( "cookie");
-const Request = require("../model/client_request");
-const Response = require("../model/client_response");
+const Request = require("../model/ClientRequest");
+const Response = require("../model/ClientResponse");
 
 class HttpRequestChannel extends AbstractRequestSource {
     

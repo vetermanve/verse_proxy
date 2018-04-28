@@ -1,10 +1,10 @@
-const HttpRequestSource = require("./client_side/channel/http_source");
-const SocketSource = require("./client_side/channel/socketio_source");
-const Logger = require("./logger/logger");
+const HttpRequestSource = require("./client_side/channel/HttpRequestChannel");
+const SocketSource = require("./client_side/channel/SocketSource");
+const Logger = require("./logger/Logger");
 
-const StackHandler = require('./server_side/handler/stack_handler');
-const FileHandler = require('./server_side/handler/file_handler');
-const NotFoundHandler = require('./server_side/handler/notfound_handler');
+const StackHandler = require('./server_side/handler/StackHandler');
+const FileHandler = require('./server_side/handler/FileHandler');
+const NotFoundHandler = require('./server_side/handler/NotFoundHandler');
 
 // Global logger configuration
 Logger.setPrefixMaxLen(18);

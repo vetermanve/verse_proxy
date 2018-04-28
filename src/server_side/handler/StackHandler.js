@@ -1,4 +1,4 @@
-const AbstractHandler = require("./abstract_handler");
+const AbstractHandler = require("./AbstractHandler");
 
 class StackHandler extends AbstractHandler {
 

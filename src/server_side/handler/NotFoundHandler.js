@@ -1,5 +1,5 @@
-const AbstractHandler = require('./abstract_handler');
-const Response = require('../../client_side/model/client_response');
+const AbstractHandler = require('./AbstractHandler');
+const Response = require('../../client_side/model/ClientResponse');
 
 class NotFoundHandler extends AbstractHandler {
     handle(clientRequest, writeBack) {

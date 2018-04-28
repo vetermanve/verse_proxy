@@ -1,7 +1,7 @@
-const AbstractHandler = require('./abstract_handler'); 
+const AbstractHandler = require('./AbstractHandler'); 
 const fs = require('fs');
 const path = require('path');
-const Response = require('../../client_side/model/client_response');
+const Response = require('../../client_side/model/ClientResponse');
 
 class FileHandler extends AbstractHandler {
     
