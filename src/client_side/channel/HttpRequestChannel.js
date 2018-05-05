@@ -28,7 +28,7 @@ class HttpRequestChannel extends AbstractRequestSource {
         const urlData = url.parse(httpRequest.url);
         
         let cookies = Cookie.parse(httpRequest.headers.cookie || '');
-        let clientRequest = new Request(null, httpRequest.method, urlData.path, urlData.query, '', httpRequest.headers, cookies);
+        let clientRequest = new Request(null, httpRequest.method, urlData.pathname, urlData.query, '', httpRequest.headers, cookies);
         self.logger.debug(clientRequest);
 
         let requestBody = [];
@@ -62,12 +62,26 @@ class HttpRequestChannel extends AbstractRequestSource {
     }
     response (response, stream, request) {
         response = response || new Response(500, "Response missing");
+
+        let cookies = '';
         
-        if (request) {
-            response.headers["x-process-full-time"] = (Date.now()/1000 - request.born).toFixed(4);    
+        for (let key in response.state) {
+            cookies += Cookie.serialize(key, response.state[key][0], {
+                httpOnly: true,
+                expires: new Date(response.state[key][1] * 1000),
+                path : '/'
+            }) + ";";    
         }
         
-        this.logger.log(response);
+        if (request) {
+            response.headers["x-process-full-time"] = (Date.now()/1000 - request.born).toFixed(4);
+        }
+        
+        if (cookies) {
+            response.headers['set-cookie'] = cookies;    
+        }
+        
+        this.logger.debug(response);
         
         // write heads
         stream.writeHead(response.code, response.headers);
@@ -80,26 +94,6 @@ class HttpRequestChannel extends AbstractRequestSource {
         
         stream.end();
     }
-    // cookieParsing (backendRequest, uid, code, head, body, state) {
-    //     let cookies = backendRequest.cookies;
-    //
-    //     try {
-    //         let stateItem;
-    //         let origin = backendRequest.request.headers['origin'] || '';
-    //         let domain = url.parse(origin).hostname;
-    //
-    //         domain = domain.split('.').slice(-2).join('.'); // TODO move cookie domain calculation anywhere 
-    //
-    //         for (let stateKey in state) {
-    //             stateItem = state[stateKey];
-    //             cookies.set(stateKey, stateItem[0], {domain: domain, httpOnly: true, expires: new Date(stateItem[1]*1000)})
-    //         }
-    //     } catch (e) {
-    //         this.logger.error(e);
-    //     }
-    //
-    //     this.process.delete(uid);
-    // }
 }
 
 module.exports = HttpRequestChannel;

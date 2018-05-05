@@ -4,7 +4,11 @@ const Logger = require("./logger/Logger");
 
 const StackHandler = require('./server_side/handler/StackHandler');
 const FileHandler = require('./server_side/handler/FileHandler');
+const ServerChanelHandler = require('./server_side/handler/ServerChannelHandler');
+
 const NotFoundHandler = require('./server_side/handler/NotFoundHandler');
+const RabbitChannel = require('./server_side/channel/RabbitMqChannel');
+const config = require('./env/config');
 
 // Global logger configuration
 Logger.setPrefixMaxLen(18);
@@ -13,13 +17,25 @@ Logger.setPrefixMaxLen(18);
 let logger = new Logger("Core");
 logger.log("This is a start!");
 
+let rabbitChannel = new RabbitChannel('amqp://' + config.amqpHost, config.getPublishQueue(), config.getResultQueue());
+rabbitChannel.logger = new Logger("RabbitServerChannel", true);
+let rabbitHandler = new ServerChanelHandler();
+rabbitHandler.channel = rabbitChannel;
+
+
 let handler = new StackHandler();
 handler.addHandler(new FileHandler(__dirname + '/../public'));
+handler.addHandler(new FileHandler('/macdata/projects/mutants/reanima-back/public'));
+
+handler.addHandler(rabbitHandler);
 handler.addHandler(new NotFoundHandler());
 
 let processing = function (clientRequest, writeBack) {
     handler.handle(clientRequest, writeBack);
 };
+
+rabbitChannel.init();
+rabbitChannel.start();
 
 // Create server
 let server = new HttpRequestSource(processing, 9080);

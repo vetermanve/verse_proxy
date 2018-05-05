@@ -1,22 +1,20 @@
 /**
  * Created by vetermanve on 09.11.16.
  */
+const uuid = require("uuid");
+const os = require("os");
+const envArgs = require('minimist');
 
-var uuid = require("uuid");
-var os = require("os");
-var envArgs = require('minimist');
+const argv = process.env.args ? envArgs(process.env.args.split(' ')) : process.env;
 
-var argv = process.env.args ? envArgs(process.env.args.split(' ')) : process.env;
-console.log(argv);
+const pmId = process.env.pm_id || uuid.v4();
+const cloudName = argv.cloud  || 'all';
+const host = os.hostname().replace('.', "_").toLowerCase();
+const dc = argv.dc || 'dc';
+const amqpHost = argv.host || 'localhost';
+const version = argv.version || 'all';
 
-var pmId = process.env.pm_id || uuid.v4();
-var cloudName = argv.cloud  || 'local';
-var host = os.hostname().replace('.', "_").toLowerCase();
-var dc = argv.dc || 'dc';
-var amqpHost = argv.host || 'localhost';
-var version = argv.version || 'all';
-
-exports.identity = {
+module.exports = {
     dc : dc,
     host : host,
     amqpHost : amqpHost,

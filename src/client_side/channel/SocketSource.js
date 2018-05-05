@@ -41,7 +41,11 @@ class SocketSource extends AbstractSource {
                     self.response(response, socket, request)
                 };
                 
-                processing(request, writeBack);
+                try {
+                    processing(request, writeBack);
+                } catch (e) {
+                    self.logger.error(e);
+                }
             });
         });
     }

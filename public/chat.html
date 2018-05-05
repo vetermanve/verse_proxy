@@ -46,7 +46,7 @@
             let request = new ClientRequest(
                 uuidV4(),
                 'get',
-                '/' + form.val(),
+                form.val(),
                 {},
                 {
                     "text" : form.val(),
@@ -71,7 +71,7 @@
 
         socket.on('response', function (msg) {
             console.log(msg);
-            let text = "<p><b>" + msg.code  +"</b> " + msg.reply_uuid + "</p>" + msg.data;
+            let text = "<p><b>" + msg.code  +"</b> " + msg.reply_uuid + "</p>" + (typeof msg.data === 'string' ? msg.data  : JSON.stringify(msg.data));
             pasteChat(text);
         });
 

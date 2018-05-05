@@ -1,6 +1,9 @@
 "use strict";
 
 class Logger {
+    static getLogger(prefix, enableDebug) {
+        return new Logger(prefix, enableDebug);
+    }
     static getTimeFromStart() {
         if (!this._startTime) {
             this._startTime = Date.now();
@@ -52,6 +55,22 @@ class Logger {
             this.log(info);
         }
     }
+}
+
+if (!('toJSON' in Error.prototype)) {
+    Object.defineProperty(Error.prototype, 'toJSON', {
+        value: function () {
+            let alt = {};
+
+            Object.getOwnPropertyNames(this).forEach(function (key) {
+                alt[key] = this[key];
+            }, this);
+
+            return alt;
+        },
+        configurable: true,
+        writable: true
+    });
 }
 
 module.exports = Logger;

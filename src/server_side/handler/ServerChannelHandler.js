@@ -11,7 +11,7 @@ class ServerChannelHandler extends AbstractHandler {
     }
     
     handle(clientRequest, writeBack) {
-        return super.handle(clientRequest, writeBack);
+        return this._channel.process(clientRequest, writeBack);
     }
 }
 
