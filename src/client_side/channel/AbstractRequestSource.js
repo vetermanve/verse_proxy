@@ -22,10 +22,10 @@ class AbstractRequestSource {
         return this._processing;
     }
     init () {
-        this.logger.log('Abstract Init');
+        // this.logger.log('Abstract Init');
     }
     start () {
-        this.logger.log("Abstract start");
+        // this.logger.log("Abstract start");
     }
 }
 

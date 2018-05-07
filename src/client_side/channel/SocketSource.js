@@ -1,4 +1,6 @@
 const AbstractSource = require("./AbstractRequestSource");
+const Logger = require('../../logger/Logger');
+
 const http = require('http');
 const createSocketIo = require('socket.io');
 
@@ -20,7 +22,11 @@ class SocketSource extends AbstractSource {
         const io = this.io;
         
         io.on('connection', function (socket) {
-            reg.addConnection(socket);
+            self.logger.debug('Connected: '+ socket.id + ', Connections count: '+ io.engine.clientsCount);
+
+            socket.on('disconnect', function () {
+                self.logger.debug('Disconnected: ' + socket.id);
+            });
             
             socket.on('request', function (msgData) {
                 let request = new Request(
@@ -54,38 +60,5 @@ class SocketSource extends AbstractSource {
         socket.emit('response', response);
     }
 }
-
-
-const reg = {
-    connections: [],
-    me: {},
-    addConnection: function (socket) {
-        const self = this;
-        self.connections.push(socket);
-        console.log('connection added: ' + self.connections.length + ' id ' + socket.id);
-
-        socket.on('disconnect', function () {
-            console.log('Got disconnect! ' + socket.id);
-            let i = self.connections.indexOf(socket);
-            self.connections.splice(i, 1);
-        });
-    },
-    cast: function (msg) {
-        for (let key in this.connections) {
-            this.connections[key].emit('chat message', 'msg for ' + key);
-        }
-    },
-    getId: function (socket) {
-        return this.connections.indexOf(socket) + 1;
-    },
-    setMe: function (socket, me) {
-        let id = this.getId(socket);
-        return this.me[id] = me;
-    },
-    getMe: function (socket) {
-        let id = this.getId(socket);
-        return this.me[id] || id;
-    }
-};
 
 module.exports = SocketSource;

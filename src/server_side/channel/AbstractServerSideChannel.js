@@ -5,10 +5,10 @@ class AbstractServerSideChannel {
     }
 
     init () {
-        this.logger.log('AbstractServerSideChannel Init');
+        // this.logger.log('AbstractServerSideChannel Init');
     }
     start () {
-        this.logger.log("AbstractServerSideChannel start");
+        // this.logger.log("AbstractServerSideChannel start");
     }
 
     constructor (processing, port) {
