@@ -11,6 +11,7 @@ class FileHandler extends AbstractHandler {
         this.root = root.replace(/\/+$/,'/');
         this.logger = Logger.getLogger('FileHandler');
     }
+    
     static getMimeType(ext, _default) {
         const mimeType = {
             '.ico': 'image/x-icon',
@@ -31,6 +32,30 @@ class FileHandler extends AbstractHandler {
         
         return mimeType[ext];
     }
+
+    static getEncoding(ext, _default) {
+        const utf = 'utf8';
+        const binary = 'binary';
+        const mimeType = {
+            '.ico': binary,
+            '.html': utf,
+            '.js': utf,
+            '.json': utf,
+            '.css': utf,
+            '.png': binary,
+            '.jpg': binary,
+            '.wav': binary,
+            '.mp3': binary,
+            '.svg': utf,
+            '.pdf': binary,
+            '.doc': binary,
+            '.eot': binary,
+            '.ttf': binary
+        };
+
+        return mimeType[ext];
+    }
+    
     handle(clientRequest, writeBack) {
         let pathname = this.getPath(clientRequest.path);
         const ext = path.parse(pathname).ext;
@@ -52,9 +77,10 @@ class FileHandler extends AbstractHandler {
                 return false;
             }
         }
+        const encoding = FileHandler.getEncoding(ext);
         
         const data = fs.readFile(pathname, {}, function (error, data) {
-            let response = new Response(200, data.toString(), {'Content-type' : mimeType}, {}, null, clientRequest.uuid);
+            let response = new Response(200, data.toString(encoding), {'Content-type' : mimeType}, {}, null, clientRequest.uuid, encoding);
             writeBack(response);
         });
         

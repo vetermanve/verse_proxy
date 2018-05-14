@@ -87,9 +87,9 @@ class HttpRequestChannel extends AbstractRequestSource {
         stream.writeHead(response.code, response.headers);
         
         if (typeof response.data === 'object') {
-            stream.write(JSON.stringify(response.data));
+            stream.write(JSON.stringify(response.data), response.encoding);
         } else {
-            stream.write(response.data);
+            stream.write(response.data, response.encoding);
         }
         
         stream.end();
