@@ -22,8 +22,9 @@ class SocketSource extends AbstractSource {
         const io = this.io;
         
         io.on('connection', function (socket) {
-            self.logger.debug('Connected: '+ socket.id + ', Connections count: '+ io.engine.clientsCount);
-
+            self.logger.debug('Connected: '+ socket.id + ', Connections count: '+ io.engine.clientsCount + " headers: " + JSON.stringify(socket.request.headers));
+            socket.state = {};
+            
             socket.on('disconnect', function () {
                 self.logger.debug('Disconnected: ' + socket.id);
             });
@@ -35,8 +36,8 @@ class SocketSource extends AbstractSource {
                     msgData.path,
                     msgData.query,
                     msgData.data,
-                    msgData.headers,
-                    msgData.state,
+                    socket.request.headers,
+                    socket.state || {},
                 );
                 
                 self.logger.debug(request);
@@ -57,6 +58,15 @@ class SocketSource extends AbstractSource {
     }
     response (response, socket) {
         this.logger.debug(response);
+        
+        if (typeof response.state === 'object' && Object.keys(response.state).length) {
+            for (let prop in response.state) {
+                if (response.state.hasOwnProperty(prop)) {
+                    socket.state[prop] = response.state[prop];
+                }
+            }
+        }
+        
         socket.emit('response', response);
     }
 }

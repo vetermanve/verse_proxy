@@ -9,6 +9,8 @@ const ServerChanelHandler = require('./server_side/handler/ServerChannelHandler'
 const NotFoundHandler = require('./server_side/handler/NotFoundHandler');
 const AmqpRequestChannel = require('./server_side/channel/AmqpRequestChannel');
 const AmqpSubscribeChannel = require('./server_side/channel/AmqpSubscriptionChannel');
+const ConnectionAddressHandler = require('./server_side/handler/connection/ConnectionAddressHandler');
+
 const config = require('./env/config');
 
 // Global logger configuration
@@ -34,6 +36,7 @@ amqpRequestHendler.channel = amqpSubscriptionChannel;
 let handler = new StackHandler();
 handler.addHandler(new FileHandler(__dirname + '/../public'));
 handler.addHandler(new FileHandler('/macdata/projects/mutants/reanima-back/public'));
+handler.addHandler(new ConnectionAddressHandler('/socket/connection/address', config.getResultQueue()));
 
 handler.addHandler(amqpRequestHendler);
 handler.addHandler(new NotFoundHandler());

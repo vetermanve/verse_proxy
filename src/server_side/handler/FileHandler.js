@@ -17,6 +17,7 @@ class FileHandler extends AbstractHandler {
             '.ico': 'image/x-icon',
             '.html': 'text/html',
             '.js': 'text/javascript',
+            '.map': 'text/plain',
             '.json': 'application/json',
             '.css': 'text/css',
             '.png': 'image/png',
