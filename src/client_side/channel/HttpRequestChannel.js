@@ -1,4 +1,4 @@
-const AbstractRequestSource = require("./AbstractRequestSource");
+const AbstractRequestSource = require("./AbstractRequestChannel");
 const http = require("http");
 const url = require("url");
 const Cookie = require( "cookie");

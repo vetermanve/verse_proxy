@@ -18,18 +18,18 @@ class AmqpCloudReader  extends  AbstractAmqpService {
         this.logger.log('Connected ' + this.queue);
         this.socket.on('data', this.process.bind(this));
     }
-    process (dataJson) {
+    process (incomingJson) {
         try {
-            let response = JSON.parse(dataJson) || {};
+            let incomingData = JSON.parse(incomingJson) || {};
 
-            this.logger.debug(response);
+            this.logger.debug(['Got data', incomingData]);
 
-            let callResult = (this._callback)(response);
+            let callResult = (this._callback)(incomingData);
             if (!callResult) {
-                this.logger.warn('Message was not handled: ' + dataJson );
+                this.logger.warn('Message was not handled: ' + incomingJson );
             }
         } catch (e) {
-            this.logger.error('Error write response: ' + dataJson + ', error: ' + e);
+            this.logger.error('Error write response: ' + incomingJson + ', error: ' + e);
         }
     }
 }

@@ -11,10 +11,11 @@ class RabbitMqChannel extends AbstractServerSideChannel {
     constructor (amqpServerHost, requestPublishQueueName, responseQueueName) {
         super();
         this.host = amqpServerHost;
+        
         this.requestPusblishQueueName = requestPublishQueueName;
         this.reponseQueueName = responseQueueName;
-        this.subscriptionWriteBacks = new Map();
-        this.subscriptionWriteBacks = new Map();
+        
+        this.responseWriteBacks = new Map();
         
         this.sender = {};
         this.reader = {};
@@ -24,19 +25,10 @@ class RabbitMqChannel extends AbstractServerSideChannel {
         this.logger.debug("Process" + clientRequest);
         clientRequest.reply = this.reponseQueueName;
         this.sender.process(clientRequest);
-        this.subscriptionWriteBacks.set(clientRequest.uuid, writeBack);
+        this.responseWriteBacks.set(clientRequest.uuid, writeBack);
         return true;
     }
-
-    subscribe(clientRequest, writeBack) {
-        this.logger.debug("Process" + clientRequest);
-        clientRequest.reply = this.reponseQueueName;
-        this.sender.process(clientRequest);
-        this.subscriptionWriteBacks.set(clientRequest.uuid, writeBack);
-        return true;
-    }
-
-
+    
     init() {
         this.sender = new AmqpCloudPublisher(
             this.host, 
@@ -74,10 +66,12 @@ class RabbitMqChannel extends AbstractServerSideChannel {
             data.reply_uuid || data.uid
         );
         
-        if (this.subscriptionWriteBacks.get(response.reply_uuid)) {
-            this.subscriptionWriteBacks.get(response.reply_uuid)(response);
-            this.subscriptionWriteBacks.delete(response.reply_uuid);
+        if (this.responseWriteBacks.get(response.reply_uuid)) {
+            this.responseWriteBacks.get(response.reply_uuid)(response);
+            this.responseWriteBacks.delete(response.reply_uuid);
             return true;
+        } else {
+            this.logger.error(["Write back not found", message]);
         }
     }
 }

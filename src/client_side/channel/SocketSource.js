@@ -1,4 +1,4 @@
-const AbstractSource = require("./AbstractRequestSource");
+const AbstractSource = require("./AbstractRequestChannel");
 const Logger = require('../../logger/Logger');
 
 const http = require('http');
@@ -60,6 +60,12 @@ class SocketSource extends AbstractSource {
         this.logger.debug(response);
         
         if (typeof response.state === 'object' && Object.keys(response.state).length) {
+            if (typeof response.state['device_id'] === 'string' 
+                && response.state['device_id'].length > 0) {
+                    this.socketsByDeviceId.set(response.state['device_id'], socket);
+                    this.logger.log(["deviceId is registered", response.state, socket.id]);
+            }
+            
             for (let prop in response.state) {
                 if (response.state.hasOwnProperty(prop)) {
                     socket.state[prop] = response.state[prop];
@@ -68,6 +74,21 @@ class SocketSource extends AbstractSource {
         }
         
         socket.emit('response', response);
+    }
+    // @todo this method should be placed in socket connection but connections currently not decomosed form channels 
+    writeToDevice (deviceId, payload) {
+        if (!this.socketsByDeviceId.has(deviceId)) {
+            return false;
+        }
+
+        try {
+            this.socketsByDeviceId.get(deviceId).socket.emit('event', payload);
+            this.logger.log(["deviceId message sent", deviceId, payload]);
+        } catch (e) {
+            this.logger.error(e);
+        }
+
+        return true;
     }
 }
 

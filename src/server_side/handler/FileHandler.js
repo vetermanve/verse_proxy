@@ -6,10 +6,10 @@ const Logger = require('../../logger/Logger');
 
 class FileHandler extends AbstractHandler {
     
-    constructor(root) {
+    constructor(root, logger) {
         super();
         this.root = root.replace(/\/+$/,'/');
-        this.logger = Logger.getLogger('FileHandler');
+        this.logger = logger || Logger.getLogger('FileHandler');
     }
     
     static getMimeType(ext, _default) {
@@ -65,8 +65,6 @@ class FileHandler extends AbstractHandler {
             return false;
         }
         
-        this.logger.log(pathname);
-
         if (!fs.existsSync(pathname)) {
             return false;
         }
@@ -78,6 +76,9 @@ class FileHandler extends AbstractHandler {
                 return false;
             }
         }
+        
+        this.logger.debug("Found: " + pathname);
+        
         const encoding = FileHandler.getEncoding(ext);
         
         const data = fs.readFile(pathname, {}, function (error, data) {
