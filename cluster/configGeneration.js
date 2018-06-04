@@ -19,7 +19,7 @@ try {
 var config = {
     "apps": [{
         "name"              : "bpass." + releaseData.id,
-        "script"            : "app.js",
+        "script"            : "src/index.js",
         "instances"         : "max",
         "kill_timeout"      : 30000,
         "error_file"        : "/dev/null",
