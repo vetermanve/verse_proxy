@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+      #messages { margin-bottom: 40px }
+    </style>
+</head>
+<body>
+<ul id="messages"></ul>
+<form action="">
+    <input id="m" autocomplete="off"/>
+    <button>Send</button>
+</form>
+<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script>
+    let uuidV4 = function b(a){return a?(a^Math.random()*16>>a/4).toString(16):([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,b)};
+
+    class ClientRequest {
+        constructor (uuid, method, path, query, data, headers, state) {
+            this.uuid = uuid || uuidv4();
+            this.method = method;
+            this.path = path || '';
+            this.query = query || '';
+            this.data = data || {};
+            this.headers = headers || {};
+            this.state = state || {};
+            this.born = Date.now()/1000;
+        }
+    }
+    
+    $(function () {
+        let socket = io(window.location.protocol + '//' + window.location.hostname + ':' + 9081);
+        let form = $('#m');
+        $('form').submit(function () {
+            
+            let request = new ClientRequest(
+                uuidV4(),
+                'get',
+                form.val(),
+                {},
+                {
+                    "text" : form.val(),
+                    "time" : Date.now(),
+                    "time_h" : (new Date()).toUTCString() 
+                },
+                {
+                    "Origin" :  window.location.host
+                },
+                {
+                    "me" : "unknown"
+                }
+            );
+            
+            console.log(request);
+            
+            socket.emit('request', request);
+
+            form.val('');
+            return false;
+        });
+
+        socket.on('response', function (msg) {
+            console.log(msg);
+            let text = "<p><b>" + msg.code  +"</b> " + msg.reply_uuid + "</p>" + (typeof msg.data === 'string' ? msg.data  : JSON.stringify(msg.data));
+            pasteChat(text);
+        });
+
+        socket.on('message', function (msg) {
+            pasteChat(msg);
+        });
+
+        window.pasteChat = function (text) {
+            $('#messages').append($('<li>').html(text));
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+    });
+</script>
+</body>
+</html>

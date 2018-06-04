@@ -1,10 +1,21 @@
-/**
- * Created by vetermanve on 09.11.16.
- */
-var uuid = require("uuid");
+const uuidv4 = require('uuid/v4');
 
-var BackendRequest = function (method, path, query, reply) {
-    var self = this;
+class ClientRequest {
+    constructor (uuid, method, path, query, data, headers, state) {
+        this.uuid = uuid || uuidv4();
+        this.method = method;
+        this.path = path || '';
+        this.query = query || '';
+        this.data = data || {};
+        this.headers = headers || {};
+        this.state = state || {};
+        this.born = Date.now()/1000;
+    }
+}
+
+module.exports = ClientRequest;
+
+/* var self = this;
     
     var uid = uuid.v4();
     var born = Date.now();
@@ -41,17 +52,4 @@ var BackendRequest = function (method, path, query, reply) {
     
     self.resultStream = {};
     self.request = {};
-    self.cookies = {};
-};
-
-exports.buildRequestObj = function (method, path, query, reply) {
-    return new BackendRequest(method, path, query, reply) 
-};
-
-exports.pack = function (request) {
-    return JSON.stringify(request.body);
-};
-
-exports.unpack = function (json) {
-    return JSON.stringify(request.body);
-};
+    self.cookies = {}; */
