@@ -3,6 +3,8 @@
 # Logs
 logs
 *.log
+
+/cluster/config/*
 npm-debug.log*
 .idea
 # Runtime data
