@@ -50,7 +50,7 @@ let eventReader = new AmqpCloudReader(amqpConnectionHost, incomingEventsReadQueu
 eventReader.logger = Logger.getLogger('EventReader', true);
 eventReader.callback = function (data) {
     if (typeof data !== 'undefined' && data['device_id']) {
-        return socketServer.writeToDevice();    
+        return socketServer.writeToDevice(data['device_id'], data);    
     }
     
     return false;

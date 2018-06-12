@@ -11,6 +11,7 @@ class SocketSource extends AbstractSource {
         super.init();
         this.server = http.createServer();
         this.io = createSocketIo(this.server);
+        this.socketsByDeviceId = new Map();
     }
     start() {
         const self = this;
@@ -60,9 +61,9 @@ class SocketSource extends AbstractSource {
         this.logger.debug(response);
         
         if (typeof response.state === 'object' && Object.keys(response.state).length) {
-            if (typeof response.state['device_id'] === 'string' 
-                && response.state['device_id'].length > 0) {
-                    this.socketsByDeviceId.set(response.state['device_id'], socket);
+            if (typeof response.state['device_id'] !== 'undefined' 
+                && response.state['device_id'][0].length > 0) {
+                    this.socketsByDeviceId.set(response.state['device_id'][0], socket);
                     this.logger.log(["deviceId is registered", response.state, socket.id]);
             }
             
@@ -77,12 +78,15 @@ class SocketSource extends AbstractSource {
     }
     // @todo this method should be placed in socket connection but connections currently not decomosed form channels 
     writeToDevice (deviceId, payload) {
+        this.logger.log(this.socketsByDeviceId);
+        
         if (!this.socketsByDeviceId.has(deviceId)) {
+            this.logger.log("writeToDevice device id "  + deviceId +  " not found");
             return false;
         }
 
         try {
-            this.socketsByDeviceId.get(deviceId).socket.emit('event', payload);
+            this.socketsByDeviceId.get(deviceId).emit('event', payload);
             this.logger.log(["deviceId message sent", deviceId, payload]);
         } catch (e) {
             this.logger.error(e);
