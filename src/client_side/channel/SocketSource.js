@@ -28,6 +28,7 @@ class SocketSource extends AbstractSource {
             
             socket.on('disconnect', function () {
                 self.logger.debug('Disconnected: ' + socket.id);
+                self._unRegisterDeviceId(socket);
             });
             
             socket.on('request', function (msgData) {
@@ -61,10 +62,8 @@ class SocketSource extends AbstractSource {
         this.logger.debug(response);
         
         if (typeof response.state === 'object' && Object.keys(response.state).length) {
-            if (typeof response.state['device_id'] !== 'undefined' 
-                && response.state['device_id'][0].length > 0) {
-                    this.socketsByDeviceId.set(response.state['device_id'][0], socket);
-                    this.logger.log(["deviceId is registered", response.state, socket.id]);
+            if (response.state['device_id'] && response.state['device_id'][0].length > 0) {
+                this._registerDeviceId(response.state['device_id'][0], socket);
             }
             
             for (let prop in response.state) {
@@ -78,21 +77,53 @@ class SocketSource extends AbstractSource {
     }
     // @todo this method should be placed in socket connection but connections currently not decomosed form channels 
     writeToDevice (deviceId, payload) {
-        this.logger.log(this.socketsByDeviceId);
-        
+        const self = this;
         if (!this.socketsByDeviceId.has(deviceId)) {
-            this.logger.log("writeToDevice device id "  + deviceId +  " not found");
+            this.logger.debug("writeToDevice device id "  + deviceId +  " not found");
             return false;
         }
 
-        try {
-            this.socketsByDeviceId.get(deviceId).emit('event', payload);
-            this.logger.log(["deviceId message sent", deviceId, payload]);
-        } catch (e) {
-            this.logger.error(e);
+        this.socketsByDeviceId.get(deviceId).forEach(function (socket, socketId) {
+            try {
+                socket.emit('event', payload);
+                self.logger.debug(["deviceId message sent", deviceId, socketId]);
+            } catch (e) {
+                self.logger.error(e);
+            }
+        });
+        
+        return true;
+    }
+    // @todo move it to state handlers
+    _registerDeviceId(deviceId, socket) {
+        let deviceSocketsSet;
+        
+        if (this.socketsByDeviceId.has(deviceId)) {
+            deviceSocketsSet = this.socketsByDeviceId.get(deviceId);
+        } else {
+            deviceSocketsSet = new Map();
+            this.socketsByDeviceId.set(deviceId, deviceSocketsSet);
         }
 
-        return true;
+        if (!deviceSocketsSet.has(socket.id)) {
+            this.logger.debug(["deviceId is registered", deviceId, socket.id]);
+            deviceSocketsSet.set(socket.id, socket);
+        }
+    }
+
+    _unRegisterDeviceId(socket) {
+        if (socket.state['device_id']) {
+            const deviceId = socket.state['device_id'][0];
+            if (this.socketsByDeviceId.has(deviceId)) {
+                const deviceIdMap = this.socketsByDeviceId.get(deviceId);
+                deviceIdMap.delete(socket.id);
+                
+                if (deviceIdMap.size === 0) {
+                    this.socketsByDeviceId.delete(deviceId);
+                    this.logger.debug(["deviceId full unregistered", deviceId, socket.id]);
+                }
+            }
+        }
     }
 }
 

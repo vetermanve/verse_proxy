@@ -43,7 +43,7 @@ httpServer.logger = new Logger("HttpRequestChannel", false);
 
 // Crate socket server listen client requests through socket
 let socketServer = new SocketSource(processing, 9081);
-socketServer.logger = new Logger("SocketChannel", true);
+socketServer.logger = new Logger("SocketChannel", false);
 
 // Create amqp event reader to pass it to clients
 let eventReader = new AmqpCloudReader(amqpConnectionHost, incomingEventsReadQueue);
@@ -58,7 +58,7 @@ eventReader.callback = function (data) {
 
 // amqp request channel
 const amqpServerChannel = new AmqpRequestChannel(amqpConnectionHost, requestPublishingQueue, requestResultsReadQueue);
-amqpServerChannel.logger = new Logger("RabbitServerChannel", true);
+amqpServerChannel.logger = new Logger("RabbitServerChannel", false);
 
 ///////////////////////////////
 //// File request handlers
