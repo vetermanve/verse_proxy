@@ -12,7 +12,7 @@
     "http": "0.0.0",
     "minimist": "^1.2.0",
     "rabbit.js": "^0.4.4",
-    "socket.io": "^1.7.3",
+    "socket.io": "^2.4.0",
     "uuid": "^3.2.1"
   }
 }
